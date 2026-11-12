@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://api.ahmarsfood.frankiecode.org.ng/api/seo/sitemap.xml"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/app-shell.html"
+    }
+  ]
+}

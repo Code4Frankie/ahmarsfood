@@ -1,0 +1,9 @@
+# Image for the Render Cron Job that runs the SEO crawler. The base image already contains Chromium.
+# Keep the Playwright version below in step with the image tag.
+FROM mcr.microsoft.com/playwright:v1.48.0-jammy
+WORKDIR /app
+ENV NODE_ENV=production PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+COPY package*.json ./
+RUN npm install --omit=dev && npm install --no-save playwright@1.48.0
+COPY src ./src
+CMD ["node", "src/seo/crawl.js"]
