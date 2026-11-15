@@ -18,4 +18,6 @@ export function uploadImage(buffer) {
   });
 }
 
-export const deleteImage = (publicId) => (publicId ? cloudinary.uploader.destroy(publicId) : null);
+export async function deleteImage(publicId) {
+  if (publicId) await cloudinary.uploader.destroy(publicId);
+}

@@ -48,14 +48,14 @@ router.put('/:id', ...admin, upload.single('image'), asyncHandler(async (req, re
   const food = await Food.findById(req.params.id);
   if (!food) throw new HttpError(404, 'Food not found');
   Object.assign(food, pick(req.body));
+  const oldImage = food.imagePublicId;
   if (req.file) {
-    const old = food.imagePublicId;
     const img = await uploadImage(req.file.buffer);
     food.image = img.url;
     food.imagePublicId = img.publicId;
-    await deleteImage(old).catch(() => {});
   }
-  await food.save();
+  await food.save(); // save first: the old photo is only removed once the dish has been updated
+  if (req.file) await deleteImage(oldImage).catch(() => {});
   requestRebuild();
   res.json({ food });
 }));
