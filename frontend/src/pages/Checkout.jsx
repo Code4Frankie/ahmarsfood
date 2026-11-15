@@ -24,7 +24,8 @@ export default function Checkout() {
   const placed = useRef(false); // stops the empty-cart redirect from fighting the post-order redirect
 
   const [cfg, setCfg] = useState(null);
-  const [pin, setPin] = useState(null);
+  const [pin, setPinRaw] = useState(null);
+  const [pinConfirmed, setPinConfirmed] = useState(false); // false while the pin is just the Lafia starting point
   const [geoMsg, setGeoMsg] = useState('');
   const [method, setMethod] = useState('paystack');
   const [error, setError] = useState('');
@@ -32,12 +33,22 @@ export default function Checkout() {
   const [form, setForm] = useState({ name: user?.name || '', phone: localPhone(user?.phone), deliveryAddress: '', landmark: '', note: '' });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  useEffect(() => { getConfig().then(setCfg).catch((e) => setError(errMsg(e))); }, []);
+  // Any pin the customer sets (tap, drag, or GPS) counts as confirmed; the Lafia starting pin does not.
+  const setPin = (p) => { setPinRaw(p); setPinConfirmed(true); };
+
+  useEffect(() => {
+    getConfig()
+      .then((c) => {
+        setCfg(c);
+        setPinRaw((cur) => cur || { lat: c.restaurant.lat, lng: c.restaurant.lng }); // default pin: Lafia, never the visitor's own city
+      })
+      .catch((e) => setError(errMsg(e)));
+  }, []);
 
   if (items.length === 0 && !placed.current) return <Navigate to="/cart" replace />;
 
   const r = cfg?.restaurant;
-  const distanceKm = pin && r ? haversineKm(r.lat, r.lng, pin.lat, pin.lng) : null;
+  const distanceKm = pin && pinConfirmed && r ? haversineKm(r.lat, r.lng, pin.lat, pin.lng) : null;
   const outside = distanceKm != null && distanceKm > cfg.delivery.maxRadiusKm;
   const fee = distanceKm != null && !outside ? feeFor(distanceKm, cfg.delivery) : null;
   const total = subtotal + (fee || 0);
@@ -48,7 +59,17 @@ export default function Checkout() {
     setGeoMsg('Finding you…');
     if (!navigator.geolocation) return setGeoMsg('Your browser cannot share its location. Tap the map instead.');
     navigator.geolocation.getCurrentPosition(
-      (pos) => { setPin({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGeoMsg(''); },
+      (pos) => {
+        const here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const away = haversineKm(r.lat, r.lng, here.lat, here.lng);
+        if (away > cfg.delivery.maxRadiusKm) {
+          // Phone GPS is outside the delivery area (e.g. the customer is in another city): keep the pin in Lafia.
+          setGeoMsg(`Your GPS location is ${away.toFixed(0)} km from Lafia, outside our delivery area. Tap the map or drag the pin to where you want the food.`);
+          return;
+        }
+        setPin(here);
+        setGeoMsg('');
+      },
       () => setGeoMsg('Could not get your location. Tap the map to drop the pin instead.'),
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -57,7 +78,7 @@ export default function Checkout() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!pin) return setError('Drop a pin on the map so the rider can find you.');
+    if (!pin || !pinConfirmed) return setError('Tap the map or drag the pin to where you want the food, so the rider can find you.');
     if (outside) return setError(`Sorry, we only deliver within ${cfg.delivery.maxRadiusKm} km of the restaurant.`);
     setBusy(true);
     try {
