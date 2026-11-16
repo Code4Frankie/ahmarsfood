@@ -29,6 +29,10 @@ export default function Menu() {
             <img src={HERO.mobile.fallback} alt={HERO.alt} className="h-full w-full object-cover" fetchPriority="high" decoding="async" />
           </picture>
         </div>
+        {/* md and up: faint dark tint over the shawarma and yoghurt side, with the brand name over it. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[52%] bg-[linear-gradient(to_left,rgba(40,6,6,.42),rgba(40,6,6,.26)_55%,transparent)] md:block" />
+        <p className="pointer-events-none absolute right-[4.5%] top-[41%] hidden text-right font-display font-extrabold leading-none text-[#FBF6EA] md:block md:text-[5.2cqw] md:[text-shadow:0_2px_16px_rgba(0,0,0,.55)]">Ahmars Food</p>
+
         {/* Phones: text sits under the picture. md and up: the same text is laid over the dark-red area of the picture (sizes scale with the hero width). */}
         <div className="px-6 py-8 md:absolute md:left-[4%] md:top-[4%] md:w-[54%] md:p-0 md:[text-shadow:0_1px_10px_rgba(0,0,0,.45)]">
           <span className="inline-block -rotate-2 rounded-full bg-gold px-3 py-1 font-mono text-xs font-bold text-ink md:px-[1.1cqw] md:py-[0.35cqw] md:text-[1cqw]">LAFIA · GANDU · AKUNZA · FULAFIA</span>
