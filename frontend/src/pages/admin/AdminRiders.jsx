@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import api, { errMsg } from '../../api';
 import { usePoll } from '../../hooks/usePoll.js';
+import PasswordInput from '../../components/PasswordInput.jsx';
 
 const ago = (d) => {
   if (!d) return 'never';
@@ -41,7 +42,7 @@ export default function AdminRiders() {
           <div><label className="label">Full name</label><input className="input" value={form.name} onChange={set('name')} required /></div>
           <div><label className="label">Phone number</label><input className="input" type="tel" value={form.phone} onChange={set('phone')} required /></div>
           <div><label className="label">Bike number</label><input className="input" value={form.bikeNumber} onChange={set('bikeNumber')} required /></div>
-          <div><label className="label">Password (8+ characters)</label><input className="input" type="password" minLength={8} value={form.password} onChange={set('password')} required /></div>
+          <div><label className="label">Password (8+ characters)</label><PasswordInput minLength={8} value={form.password} onChange={set('password')} required /></div>
           <div className="sm:col-span-2"><button className="btn-primary" disabled={busy}>Create rider</button></div>
         </form>
       )}
@@ -53,11 +54,28 @@ export default function AdminRiders() {
           <div key={r._id} className="card flex flex-wrap items-center gap-3 !p-3 text-sm">
             <div className="min-w-[10rem] flex-1">
               <p className="font-semibold">{r.user?.name}</p>
-              <p className="text-xs text-ink/60">{r.user?.phone} · bike {r.bikeNumber}</p>
+              <p className="text-xs text-ink/60">{r.user?.phone} · bike {r.bikeNumber}{r.approval === 'pending' ? ' · applied, waiting for approval' : ''}</p>
             </div>
-            <p className="text-xs text-ink/60">Location: {ago(r.lastLocationUpdate)}</p>
-            <button className={`rounded-full px-3 py-1 text-xs font-bold ${r.isOnline ? 'bg-forest text-white' : 'bg-ink/10 text-ink/60'}`} disabled={busy} onClick={() => patch(r, { isOnline: !r.isOnline })}>{r.isOnline ? 'Online' : 'Offline'}</button>
-            <button className={`rounded-full px-3 py-1 text-xs font-bold ${r.isAvailable ? 'bg-forest/15 text-forest-dark' : 'bg-sunset/20 text-sunset-dark'}`} disabled={busy} onClick={() => patch(r, { isAvailable: !r.isAvailable })}>{r.isAvailable ? 'Free' : 'Busy'}</button>
+            {r.approval === 'pending' && (
+              <>
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ${r.user?.phoneVerifiedAt ? 'bg-forest/15 text-forest-dark' : 'bg-sunset/20 text-sunset-dark'}`}>{r.user?.phoneVerifiedAt ? 'Phone confirmed' : 'Phone not confirmed yet'}</span>
+                <button className="btn-primary !px-3 !py-1 text-xs" disabled={busy || !r.user?.phoneVerifiedAt} onClick={() => patch(r, { approval: 'approved' })}>Approve</button>
+                <button className="btn-ghost !px-3 !py-1 text-xs" disabled={busy} onClick={() => patch(r, { approval: 'rejected' })}>Reject</button>
+              </>
+            )}
+            {r.approval === 'rejected' && (
+              <>
+                <span className="rounded-full bg-chili/10 px-3 py-1 text-xs font-bold text-chili">Rejected</span>
+                <button className="btn-ghost !px-3 !py-1 text-xs" disabled={busy || !r.user?.phoneVerifiedAt} onClick={() => patch(r, { approval: 'approved' })}>Approve instead</button>
+              </>
+            )}
+            {(!r.approval || r.approval === 'approved') && (
+              <>
+                <p className="text-xs text-ink/60">Location: {ago(r.lastLocationUpdate)}</p>
+                <button className={`rounded-full px-3 py-1 text-xs font-bold ${r.isOnline ? 'bg-forest text-white' : 'bg-ink/10 text-ink/60'}`} disabled={busy} onClick={() => patch(r, { isOnline: !r.isOnline })}>{r.isOnline ? 'Online' : 'Offline'}</button>
+                <button className={`rounded-full px-3 py-1 text-xs font-bold ${r.isAvailable ? 'bg-forest/15 text-forest-dark' : 'bg-sunset/20 text-sunset-dark'}`} disabled={busy} onClick={() => patch(r, { isAvailable: !r.isAvailable })}>{r.isAvailable ? 'Free' : 'Busy'}</button>
+              </>
+            )}
           </div>
         ))}
       </div>

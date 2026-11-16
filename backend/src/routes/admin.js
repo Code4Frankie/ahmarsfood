@@ -75,7 +75,10 @@ router.post('/orders/:id/redispatch', asyncHandler(async (req, res) => {
 }));
 
 router.get('/riders', asyncHandler(async (req, res) => {
-  const riders = await Rider.find().populate('user', 'name phone').sort({ isOnline: -1 });
+  const riders = await Rider.find().populate('user', 'name phone phoneVerifiedAt').sort({ isOnline: -1 });
+  // Applicants waiting for a decision first, then the rest.
+  const rank = (r) => (r.approval === 'pending' ? 0 : r.approval === 'rejected' ? 2 : 1);
+  riders.sort((a, b) => rank(a) - rank(b));
   res.json({ riders });
 }));
 
@@ -85,7 +88,7 @@ router.post('/riders', asyncHandler(async (req, res) => {
   if (!name?.trim() || !bikeNumber?.trim()) throw new HttpError(400, 'Name and bike number are required');
   if (!isValidPhone(phone)) throw new HttpError(400, 'Enter a valid phone number');
   if (!password || password.length < 8) throw new HttpError(400, 'Password must be at least 8 characters');
-  const user = await User.create({ name: name.trim(), phone, password, role: 'rider' });
+  const user = await User.create({ name: name.trim(), phone, password, role: 'rider', phoneVerifiedAt: new Date() });
   try {
     const rider = await Rider.create({ user: user._id, bikeNumber: bikeNumber.trim() });
     res.status(201).json({ rider });
@@ -97,6 +100,17 @@ router.post('/riders', asyncHandler(async (req, res) => {
 
 router.patch('/riders/:id', asyncHandler(async (req, res) => {
   const update = {};
+  if (req.body.approval !== undefined) {
+    if (!['approved', 'rejected'].includes(req.body.approval)) throw new HttpError(400, 'approval must be approved or rejected');
+    if (req.body.approval === 'approved') {
+      const current = await Rider.findById(needId(req.params.id)).populate('user', 'phoneVerifiedAt');
+      if (!current) throw new HttpError(404, 'Rider not found');
+      if (current.approval === 'pending' && !current.user?.phoneVerifiedAt) throw new HttpError(409, 'This rider has not confirmed their phone number yet');
+    } else {
+      update.isOnline = false;
+    }
+    update.approval = req.body.approval;
+  }
   if (req.body.isAvailable !== undefined) update.isAvailable = !!req.body.isAvailable;
   if (req.body.isOnline !== undefined) update.isOnline = !!req.body.isOnline;
   const rider = await Rider.findByIdAndUpdate(needId(req.params.id), update, { new: true }).populate('user', 'name phone');

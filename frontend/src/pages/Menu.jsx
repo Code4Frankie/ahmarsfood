@@ -37,7 +37,7 @@ export default function Menu() {
         <div className="px-6 py-8 md:absolute md:left-[4%] md:top-[4%] md:w-[54%] md:p-0 md:[text-shadow:0_1px_10px_rgba(0,0,0,.45)]">
           <span className="inline-block -rotate-2 rounded-full bg-gold px-3 py-1 font-mono text-xs font-bold text-ink md:px-[1.1cqw] md:py-[0.35cqw] md:text-[1cqw]">LAFIA · GANDU · AKUNZA · FULAFIA</span>
           <h1 className="mt-4 text-4xl font-extrabold leading-tight md:mt-[1.1cqw] md:text-[4cqw] md:leading-[1.05]">Cooked with Love,<br /><span className="text-gold md:text-[2.7cqw]">...trust in the taste, Ci-Kalashe.</span></h1>
-          <p className="mt-3 max-w-md text-white/90 md:sr-only lg:not-sr-only lg:mt-[1cqw] md:max-w-[44cqw] md:text-[1.3cqw] md:leading-snug">Order pounded yam, fried/jollof rice, shawarma and more in Lafia. Pay online or on delivery, then follow your rider to your door.</p>
+          <p className="mt-3 max-w-md text-white/90 md:sr-only lg:not-sr-only lg:mt-[1cqw] md:max-w-[44cqw] md:text-[1.3cqw] md:leading-snug">Order pounded yam, fried/jollof rice, shawarma and more in Lafia. Pay online, then follow your rider to your door.</p>
         </div>
       </section>
 

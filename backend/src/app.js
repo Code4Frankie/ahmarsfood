@@ -26,6 +26,7 @@ app.use('/api/webhooks', webhookRoutes);
 app.use(express.json({ limit: '100kb' }));
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false });
+const resetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHeaders: true, legacyHeaders: false, message: { message: 'Too many attempts, please try again in a few minutes' } });
 const paymentLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
@@ -35,11 +36,14 @@ app.get('/api/config', (req, res) =>
   res.json({
     restaurant: env.restaurant,
     delivery: { baseFee: env.delivery.baseFee, perKm: env.delivery.perKm, maxRadiusKm: env.restaurant.maxRadiusKm },
-    maxPodAmount: env.maxPodAmount,
-    paymentMethods: ['paystack', 'opay', 'pod'],
+    paymentMethods: ['paystack', 'opay'],
   })
 );
 
+app.use('/api/auth/forgot-password', resetLimiter);
+app.use('/api/auth/reset-password', resetLimiter);
+app.use('/api/auth/rider-signup', resetLimiter);
+app.use('/api/auth/verify-phone', resetLimiter);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/foods', foodRoutes);
 app.use('/api/orders', orderRoutes);

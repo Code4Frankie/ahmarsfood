@@ -13,7 +13,6 @@ const localPhone = (p) => (p?.startsWith('234') ? '0' + p.slice(3) : p || '');
 const METHODS = [
   { id: 'paystack', title: 'Paystack', sub: 'Card, bank transfer or USSD' },
   { id: 'opay', title: 'Opay', sub: 'Opay wallet, transfer or card' },
-  { id: 'pod', title: 'Pay on delivery', sub: 'Cash or transfer when your food arrives' },
 ];
 
 export default function Checkout() {
@@ -52,8 +51,6 @@ export default function Checkout() {
   const outside = distanceKm != null && distanceKm > cfg.delivery.maxRadiusKm;
   const fee = distanceKm != null && !outside ? feeFor(distanceKm, cfg.delivery) : null;
   const total = subtotal + (fee || 0);
-  const podAllowed = !cfg || total <= cfg.maxPodAmount;
-  const activeMethod = method === 'pod' && !podAllowed ? 'paystack' : method;
 
   const useMyLocation = () => {
     setGeoMsg('Finding you…');
@@ -84,7 +81,7 @@ export default function Checkout() {
     try {
       const { data } = await api.post('/orders', {
         items: items.map((i) => ({ foodId: i.foodId, qty: i.qty })),
-        paymentMethod: activeMethod,
+        paymentMethod: method,
         deliveryAddress: form.deliveryAddress,
         landmark: form.landmark,
         note: form.note,
@@ -136,18 +133,15 @@ export default function Checkout() {
 
         <section className="card space-y-3">
           <h2 className="text-lg font-bold">How would you like to pay?</h2>
-          {METHODS.map((m) => {
-            const disabled = m.id === 'pod' && !podAllowed;
-            return (
-              <label key={m.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 ${activeMethod === m.id ? 'border-forest bg-forest/5' : 'border-ink/10'} ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}>
-                <input type="radio" name="method" className="mt-1" checked={activeMethod === m.id} disabled={disabled} onChange={() => setMethod(m.id)} />
-                <span>
-                  <span className="block font-semibold">{m.title}</span>
-                  <span className="block text-sm text-ink/60">{disabled ? `Pay on delivery is for orders up to ${naira(cfg.maxPodAmount)}` : m.sub}</span>
-                </span>
-              </label>
-            );
-          })}
+          {METHODS.map((m) => (
+            <label key={m.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 ${method === m.id ? 'border-forest bg-forest/5' : 'border-ink/10'}`}>
+              <input type="radio" name="method" className="mt-1" checked={method === m.id} onChange={() => setMethod(m.id)} />
+              <span>
+                <span className="block font-semibold">{m.title}</span>
+                <span className="block text-sm text-ink/60">{m.sub}</span>
+              </span>
+            </label>
+          ))}
         </section>
       </div>
 
@@ -165,7 +159,7 @@ export default function Checkout() {
           {fee != null && <p className="text-xs text-ink/50">The final delivery fee is confirmed when you place the order.</p>}
           {error && <p className="rounded-lg bg-chili/10 p-3 text-sm text-chili">{error}</p>}
           <button className="btn-accent w-full" disabled={busy || !cfg}>
-            {busy ? 'Placing order…' : activeMethod === 'pod' ? 'Place order' : 'Place order and pay'}
+            {busy ? 'Placing order…' : 'Place order and pay'}
           </button>
         </div>
       </aside>

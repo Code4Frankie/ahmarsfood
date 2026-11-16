@@ -6,6 +6,7 @@ import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
 import Orders from './pages/Orders.jsx';
 import OrderTracking from './pages/OrderTracking.jsx';
 import AdminSeo from './pages/AdminSeo.jsx';
@@ -14,7 +15,8 @@ import AdminOrders from './pages/admin/AdminOrders.jsx';
 import AdminMenu from './pages/admin/AdminMenu.jsx';
 import AdminRiders from './pages/admin/AdminRiders.jsx';
 import AdminMoney from './pages/admin/AdminMoney.jsx';
-import RiderHome from './pages/rider/RiderHome.jsx';
+import RiderEntry from './pages/rider/RiderEntry.jsx';
+import RiderSignup from './pages/rider/RiderSignup.jsx';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -49,6 +51,8 @@ export default function App() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/rider/signup" element={<RiderSignup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/checkout" element={<Protected><Checkout /></Protected>} />
         <Route path="/orders" element={<Protected><Orders /></Protected>} />
         <Route path="/orders/:id" element={<Protected><OrderTracking /></Protected>} />
@@ -60,7 +64,7 @@ export default function App() {
           <Route path="money" element={<AdminMoney />} />
           <Route path="seo" element={<AdminSeo />} />
         </Route>
-        <Route path="/rider" element={<RoleOnly role="rider"><RiderHome /></RoleOnly>} />
+        <Route path="/rider" element={<RoleOnly role="rider"><RiderEntry /></RoleOnly>} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

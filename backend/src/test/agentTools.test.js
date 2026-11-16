@@ -29,7 +29,7 @@ function world({ orderError, seoReport = REPORT } = {}) {
     getFoodsByIds: rec('getFoodsByIds', (ids) => ids.map((id, i) => food(id, `Dish ${i}`, 1000 + i * 500, { prepTime: 30 - i * 10 }))),
     setPrice: rec('setPrice', (id, price) => ({ food: food(id, 'Jollof Rice', price), before: 1800 })),
   };
-  const orders = { findOrderForUser: rec('findOrderForUser', () => { if (orderError) throw orderError; return { order: { _id: 'o1', orderNo: 'AF-TEST1', status: 'Preparing', paymentMethod: 'pod', paymentStatus: 'unpaid', total: 2000, deliveryFee: 200, items: [{ name: 'Jollof', qty: 1 }], estimatedTime: 35 }, delivery: null }; }) };
+  const orders = { findOrderForUser: rec('findOrderForUser', () => { if (orderError) throw orderError; return { order: { _id: 'o1', orderNo: 'AF-TEST1', status: 'Preparing', paymentMethod: 'paystack', paymentStatus: 'unpaid', total: 2000, deliveryFee: 200, items: [{ name: 'Jollof', qty: 1 }], estimatedTime: 35 }, delivery: null }; }) };
   const reports = { dailySummary: rec('dailySummary', { revenue: 5000 }) };
   const drafts = { createDraft: rec('createDraft', { _id: 'd1' }) };
 

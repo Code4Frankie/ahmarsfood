@@ -44,7 +44,7 @@ export async function initPayment(order, provider, user) {
   }
 
   // Earlier unfinished attempts are marked abandoned (a late success on them is still honoured).
-  await Payment.updateMany({ order: order._id, status: 'initiated', provider: { $ne: 'POD' } }, { status: 'abandoned' });
+  await Payment.updateMany({ order: order._id, status: 'initiated' }, { status: 'abandoned' });
   const payment = await Payment.create({
     order: order._id,
     provider: PROVIDER_NAME[provider],

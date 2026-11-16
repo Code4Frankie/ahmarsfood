@@ -10,6 +10,14 @@ import { env } from '../config/env.js';
 const router = Router();
 router.use(protect, requireRole('rider'));
 
+// Pending or rejected riders can see their own status (GET /me) and nothing else.
+router.use(asyncHandler(async (req, res, next) => {
+  if (req.method === 'GET' && req.path === '/me') return next();
+  const rider = await Rider.findOne({ user: req.user._id }).select('approval');
+  if (rider && rider.approval !== 'approved') throw new HttpError(403, rider.approval === 'pending' ? 'Your rider application is waiting for approval' : 'Your rider application was not approved');
+  next();
+}));
+
 const myRider = async (req) => {
   const rider = await Rider.findOne({ user: req.user._id });
   if (!rider) throw new HttpError(404, 'No rider profile for this account');
@@ -30,7 +38,6 @@ export const deliveryView = (d, { accepted }) => ({
   order: {
     orderNo: d.order.orderNo,
     paymentMethod: d.order.paymentMethod,
-    collectAmount: d.order.paymentMethod === 'pod' ? d.order.total : 0, // cash/transfer to collect on arrival
     ...(accepted ? { customerName: d.order.customerName, customerPhone: d.order.customerPhone, note: d.order.note, items: d.order.items.map((i) => ({ name: i.name, qty: i.qty })) } : {}),
   },
 });

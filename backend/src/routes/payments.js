@@ -22,7 +22,7 @@ router.post('/:provider/init', protect, requireRole('customer', 'admin'), asyncH
 // The return page calls this with the reference from the redirect URL. We ask the provider; we don't trust the URL.
 router.get('/verify/:reference', protect, asyncHandler(async (req, res) => {
   const payment = await Payment.findOne({ reference: req.params.reference });
-  if (!payment || payment.provider === 'POD') throw new HttpError(404, 'Payment not found');
+  if (!payment) throw new HttpError(404, 'Payment not found');
   const order = await Order.findById(payment.order);
   if (req.user.role !== 'admin' && String(order.user) !== String(req.user._id)) throw new HttpError(404, 'Payment not found');
   const updated = await verifyAndConfirm(payment);

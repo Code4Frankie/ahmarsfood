@@ -12,7 +12,6 @@ export async function dailySummary(dateInput) {
   const byMethod = {};
   let revenue = 0;
   let paidOrders = 0;
-  let podToCollect = 0;
   for (const o of orders) {
     if (o.paymentStatus === 'paid') {
       revenue += o.total;
@@ -20,8 +19,6 @@ export async function dailySummary(dateInput) {
       byMethod[o.paymentMethod] = byMethod[o.paymentMethod] || { orders: 0, amount: 0 };
       byMethod[o.paymentMethod].orders += 1;
       byMethod[o.paymentMethod].amount += o.total;
-    } else if (o.paymentMethod === 'pod' && o.status !== 'Pending Payment') {
-      podToCollect += o.total;
     }
   }
   return {
@@ -30,7 +27,6 @@ export async function dailySummary(dateInput) {
     delivered: orders.filter((o) => o.status === 'Delivered').length,
     paidOrders,
     revenue,
-    podToCollect, // Pay on Delivery orders not yet collected
     byMethod,
   };
 }

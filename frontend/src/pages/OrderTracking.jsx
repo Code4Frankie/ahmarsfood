@@ -61,7 +61,7 @@ export default function OrderTracking() {
   if (error && !data) return <p className="rounded-lg bg-chili/10 p-4 text-chili">{error}</p>;
   if (!order) return <p className="py-10 text-center text-ink/60">Loading your order…</p>;
 
-  const flow = order.paymentMethod === 'pod' ? FLOW.slice(1) : FLOW;
+  const flow = FLOW;
   const idx = flow.indexOf(order.status);
   const rider = delivery?.rider;
   const eta = delivery?.estimatedTime || order.estimatedTime;
@@ -132,7 +132,7 @@ export default function OrderTracking() {
         <div className="flex justify-between border-t border-dashed border-ink/20 pt-2"><span>Delivery</span><span className="font-mono">{naira(order.deliveryFee)}</span></div>
         <div className="flex justify-between text-base font-bold"><span>Total</span><span className="font-mono">{naira(order.total)}</span></div>
         <p className="pt-2 text-ink/60">
-          {order.paymentMethod === 'pod' ? 'Pay on delivery: have the amount ready for your rider.' : order.paymentStatus === 'paid' ? `Paid online (${order.paymentMethod === 'opay' ? 'Opay' : 'Paystack'}).` : 'Not paid yet.'}
+          {order.paymentStatus === 'paid' ? `Paid online (${order.paymentMethod === 'opay' ? 'Opay' : 'Paystack'}).` : 'Not paid yet.'}
         </p>
         <p className="text-ink/60">Delivering to: {order.deliveryAddress}{order.landmark ? `, ${order.landmark}` : ''}</p>
       </div>

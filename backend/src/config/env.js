@@ -16,6 +16,12 @@ export const env = {
     merchantId: process.env.OPAY_MERCHANT_ID,
     baseUrl: process.env.OPAY_BASE_URL || 'https://sandboxapi.opaycheckout.com',
   },
+  sms: {
+    apiKey: process.env.TERMII_API_KEY,
+    senderId: process.env.TERMII_SENDER_ID || 'AhmarsFood',
+    baseUrl: process.env.TERMII_BASE_URL || 'https://api.ng.termii.com',
+    channel: process.env.TERMII_CHANNEL || 'dnd',
+  },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
     apiKey: process.env.CLOUDINARY_API_KEY,
@@ -36,7 +42,6 @@ export const env = {
     offerTimeoutMs: num(process.env.OFFER_TIMEOUT_SECONDS, 120) * 1000,
     locationStaleMs: num(process.env.RIDER_LOCATION_STALE_SECONDS, 120) * 1000,
   },
-  maxPodAmount: num(process.env.MAX_POD_AMOUNT, 20000),
   // Optional: a Vercel Deploy Hook address. When set, changing the menu asks Vercel to rebuild the site so the saved pages stay current.
   deployHookUrl: process.env.VERCEL_DEPLOY_HOOK_URL,
   rebuildDelayMs: num(process.env.REBUILD_DELAY_SECONDS, 120) * 1000,

@@ -64,7 +64,7 @@ export default function DishPage() {
       <section className="mt-8 space-y-2">
         <h2 className="text-xl font-bold">Order {food.name} in Lafia</h2>
         <p className="text-ink/80">
-          Ahmars Food is at Maraba Akunza, Federal University Lafia. Order online, pay with Paystack or Opay or on delivery, and follow your rider to your door.
+          Ahmars Food is at Maraba Akunza, Federal University Lafia. Order online, pay with Paystack or Opay, and follow your rider to your door.
           See <Link to={LANDING_PATHS.lafia} className="underline">food delivery in Lafia</Link> or <Link to={LANDING_PATHS.ful} className="underline">delivery at Federal University Lafia</Link>.
         </p>
       </section>

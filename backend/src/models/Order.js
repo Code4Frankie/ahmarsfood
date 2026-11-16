@@ -24,7 +24,7 @@ const orderSchema = new mongoose.Schema(
     deliveryFee: { type: Number, required: true },
     total: { type: Number, required: true },
     status: { type: String, enum: ORDER_STATUSES, default: 'Pending Payment', index: true },
-    paymentMethod: { type: String, enum: ['paystack', 'opay', 'pod'], required: true },
+    paymentMethod: { type: String, enum: ['paystack', 'opay'], required: true },
     paymentStatus: { type: String, enum: ['unpaid', 'paid', 'failed'], default: 'unpaid' },
     paymentReference: String,
     customerName: String,

@@ -9,6 +9,18 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 8, select: false },
     role: { type: String, enum: ['customer', 'admin', 'rider'], default: 'customer' },
     address: String,
+    // Password reset (see routes/auth.js). Only a hash of the 6-digit code is kept.
+    resetCodeHash: { type: String, select: false },
+    resetExpires: { type: Date, select: false },
+    resetAttempts: { type: Number, default: 0, select: false },
+    resetSentAt: { type: Date, select: false },
+    // Phone check for rider sign-ups: a 6-digit SMS code. Only a hash of the code is kept.
+    phoneVerifiedAt: Date,
+    verifyCodeHash: { type: String, select: false },
+    verifyExpires: { type: Date, select: false },
+    verifyAttempts: { type: Number, default: 0, select: false },
+    verifySentAt: { type: Date, select: false },
+    passwordChangedAt: Date, // tokens issued before this moment stop working
     lat: Number,
     lng: Number,
   },

@@ -2,13 +2,12 @@ import { env } from '../config/env.js';
 import Rider from '../models/Rider.js';
 import Delivery from '../models/Delivery.js';
 import Order from '../models/Order.js';
-import Payment from '../models/Payment.js';
 import { HttpError } from '../utils/httpError.js';
 import { haversineKm } from '../utils/geo.js';
 
 const ACTIVE = ['Offered', 'Accepted', 'Picked Up', 'On The Way'];
 
-// Called once an order is confirmed (payment verified, or Pay on Delivery). Safe to call twice.
+// Called once an order is confirmed (online payment verified). Safe to call twice.
 export async function startDispatch(orderId) {
   const order = await Order.findById(orderId);
   if (!order) return null;
@@ -37,6 +36,7 @@ export async function offerToNextRider(deliveryRef) {
   const rider = await Rider.findOne({
     isOnline: true,
     isAvailable: true,
+    approval: { $nin: ['pending', 'rejected'] },
     lastLocationUpdate: { $gte: fresh },
     _id: { $nin: [...delivery.attemptedRiders, ...busyRiders] },
     location: {
@@ -96,17 +96,13 @@ export async function rejectOffer(deliveryId, riderId) {
 
 const NEXT = { Accepted: 'Picked Up', 'Picked Up': 'On The Way', 'On The Way': 'Delivered' };
 
-export async function advanceDelivery(deliveryId, riderId, nextStatus, { collected } = {}) {
+export async function advanceDelivery(deliveryId, riderId, nextStatus) {
   const current = Object.keys(NEXT).find((k) => NEXT[k] === nextStatus);
   if (!current) throw new HttpError(400, 'Invalid status');
 
   const existing = await Delivery.findOne({ _id: deliveryId, rider: riderId, status: current }).populate('order');
   if (!existing) throw new HttpError(409, `Delivery must be "${current}" before it can be "${nextStatus}"`);
   const order = existing.order;
-
-  if (nextStatus === 'Delivered' && order.paymentMethod === 'pod' && !collected) {
-    throw new HttpError(400, 'Confirm that payment was collected (cash or transfer) before marking delivered');
-  }
 
   const set = { status: nextStatus };
   if (nextStatus === 'Delivered') set.deliveredAt = new Date();
@@ -115,8 +111,7 @@ export async function advanceDelivery(deliveryId, riderId, nextStatus, { collect
 
   if (nextStatus === 'Picked Up') await Order.updateOne({ _id: order._id }, { status: 'On The Way' });
   if (nextStatus === 'Delivered') {
-    await Order.updateOne({ _id: order._id }, { status: 'Delivered', ...(order.paymentMethod === 'pod' ? { paymentStatus: 'paid' } : {}) });
-    if (order.paymentMethod === 'pod') await Payment.updateOne({ order: order._id, provider: 'POD' }, { status: 'success' });
+    await Order.updateOne({ _id: order._id }, { status: 'Delivered' });
     await Rider.updateOne({ _id: riderId }, { isAvailable: true });
   }
   return delivery;
@@ -126,6 +121,7 @@ export async function advanceDelivery(deliveryId, riderId, nextStatus, { collect
 export async function assignManually(orderId, riderId) {
   const rider = await Rider.findById(riderId);
   if (!rider) throw new HttpError(404, 'Rider not found');
+  if (rider.approval === 'pending' || rider.approval === 'rejected') throw new HttpError(409, 'This rider has not been approved yet');
   await startDispatchRecord(orderId);
   const before = await Delivery.findOne({ order: orderId });
   if (['Delivered', 'Cancelled'].includes(before.status)) throw new HttpError(409, `Delivery is already ${before.status}`);

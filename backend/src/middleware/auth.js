@@ -19,6 +19,10 @@ export const protect = asyncHandler(async (req, res, next) => {
   }
   const user = await User.findById(payload.id);
   if (!user) throw new HttpError(401, 'Account no longer exists');
+  // A password reset signs out every device: tokens issued before the change are refused.
+  if (user.passwordChangedAt && Math.floor(user.passwordChangedAt.getTime() / 1000) > payload.iat) {
+    throw new HttpError(401, 'Password was changed, please log in again');
+  }
   req.user = user;
   next();
 });

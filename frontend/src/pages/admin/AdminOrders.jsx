@@ -12,7 +12,7 @@ const TABS = [
   { id: 'cancelled', label: 'Cancelled', status: 'Cancelled' },
 ];
 const ACTIVE = ['Pending', 'Preparing', 'On The Way'];
-const METHOD = { paystack: 'Paystack', opay: 'Opay', pod: 'Pay on delivery' };
+const METHOD = { paystack: 'Paystack', opay: 'Opay' };
 const time = (d) => new Date(d).toLocaleString('en-NG', { dateStyle: 'short', timeStyle: 'short' });
 
 function DeliveryLine({ d }) {
@@ -106,7 +106,7 @@ export default function AdminOrders() {
               </div>
               <div>
                 <ul>{o.items.map((i) => <li key={i.food}>{i.qty} × {i.name}</li>)}</ul>
-                <p className="mt-1 font-mono font-bold">{naira(o.total)} <span className="font-sans font-normal text-ink/60">({METHOD[o.paymentMethod]}, {o.paymentStatus === 'paid' ? 'paid' : o.paymentMethod === 'pod' ? 'collect on delivery' : 'not paid'})</span></p>
+                <p className="mt-1 font-mono font-bold">{naira(o.total)} <span className="font-sans font-normal text-ink/60">({METHOD[o.paymentMethod]}, {o.paymentStatus === 'paid' ? 'paid' : 'not paid'})</span></p>
               </div>
             </div>
             {o.status !== 'Pending Payment' && <DeliveryLine d={d} />}

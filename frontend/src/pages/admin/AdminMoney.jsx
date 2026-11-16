@@ -3,7 +3,7 @@ import api, { errMsg } from '../../api';
 import { naira } from '../../utils/money';
 
 const today = () => new Date(Date.now() + 3600000).toISOString().slice(0, 10); // Lafia time (UTC+1)
-const METHOD = { paystack: 'Paystack', opay: 'Opay', pod: 'Pay on delivery' };
+const METHOD = { paystack: 'Paystack', opay: 'Opay' };
 const CHIP = { success: 'bg-forest/15 text-forest-dark', initiated: 'bg-gold/40 text-ink', failed: 'bg-chili/15 text-chili', abandoned: 'bg-ink/10 text-ink/60' };
 
 export default function AdminMoney() {
@@ -34,11 +34,10 @@ export default function AdminMoney() {
 
       {summary && (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             <Card label="Orders" value={summary.orders} />
             <Card label="Delivered" value={summary.delivered} />
             <Card label="Paid revenue" value={naira(summary.revenue)} />
-            <Card label="Pay on delivery to collect" value={naira(summary.podToCollect)} />
           </div>
           {Object.keys(summary.byMethod).length > 0 && (
             <p className="text-sm text-ink/70">{Object.entries(summary.byMethod).map(([m, v]) => `${METHOD[m] || m}: ${v.orders} order(s), ${naira(v.amount)}`).join(' · ')}</p>
@@ -49,7 +48,7 @@ export default function AdminMoney() {
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-bold">Payments</h2>
-          <select className="input !w-auto" value={provider} onChange={(e) => setProvider(e.target.value)}><option value="">All providers</option><option>Paystack</option><option>Opay</option><option>POD</option></select>
+          <select className="input !w-auto" value={provider} onChange={(e) => setProvider(e.target.value)}><option value="">All providers</option><option>Paystack</option><option>Opay</option></select>
           <select className="input !w-auto" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option>success</option><option>initiated</option><option>failed</option><option>abandoned</option></select>
         </div>
         {payments?.length === 0 && <p className="card text-ink/60">No payments match.</p>}

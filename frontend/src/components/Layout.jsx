@@ -23,7 +23,7 @@ export default function Layout() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <Link to="/"><img src="/logo-header.png" alt="Ahmars Food" width="109" height="44" className="h-11 w-auto" /></Link>
           <nav className="flex items-center gap-3 sm:gap-6">
-            {user?.role !== 'rider' && <NavLink to="/" end className={(s) => `${link(s)} hidden sm:inline`}>Menu</NavLink>}
+            {user?.role !== 'rider' && <NavLink to="/" end onClick={() => window.scrollTo({ top: 0 })} className={link}>Home</NavLink>}
             {user && user.role !== 'rider' && <NavLink to="/orders" className={link}>My orders</NavLink>}
             {user?.role === 'admin' && <NavLink to="/admin" className={link}>Admin</NavLink>}
             {user?.role === 'rider' && <NavLink to="/rider" className={link}>Rider app</NavLink>}

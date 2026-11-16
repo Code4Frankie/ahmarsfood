@@ -37,3 +37,17 @@ test('phone numbers normalise to 234XXXXXXXXXX', () => {
   assert.equal(isValidPhone('2348114077101'), true);
   assert.equal(isValidPhone('0811'), false);
 });
+
+import { generateResetCode, hashResetCode, resetCodeMatches } from '../utils/resetCode.js';
+
+test('reset codes are 6 digits and only the right code, user and secret match the stored hash', () => {
+  for (let i = 0; i < 200; i++) assert.match(generateResetCode(), /^\d{6}$/);
+  const hash = hashResetCode('042917', 'user1', 'secret');
+  assert.equal(resetCodeMatches('042917', 'user1', hash, 'secret'), true);
+  assert.equal(resetCodeMatches(' 042917 ', 'user1', hash, 'secret'), true);
+  assert.equal(resetCodeMatches('042918', 'user1', hash, 'secret'), false);
+  assert.equal(resetCodeMatches('042917', 'user2', hash, 'secret'), false);
+  assert.equal(resetCodeMatches('042917', 'user1', hash, 'other'), false);
+  assert.equal(resetCodeMatches('12345', 'user1', hash, 'secret'), false);
+  assert.equal(resetCodeMatches('042917', 'user1', undefined, 'secret'), false);
+});

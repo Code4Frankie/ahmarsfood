@@ -26,9 +26,9 @@ router.post('/:id/reject', asyncHandler(async (req, res) => {
   res.json({ message: 'Offer declined' });
 }));
 
-// body: { status: "Picked Up" | "On The Way" | "Delivered", collected?: true }  (collected required for Pay on Delivery)
+// body: { status: "Picked Up" | "On The Way" | "Delivered" }
 router.patch('/:id/status', asyncHandler(async (req, res) => {
-  const d = await advanceDelivery(req.params.id, await riderId(req), req.body.status, { collected: req.body.collected === true });
+  const d = await advanceDelivery(req.params.id, await riderId(req), req.body.status);
   res.json({ delivery: deliveryView(await Delivery.findById(d._id).populate('order'), { accepted: true }) });
 }));
 

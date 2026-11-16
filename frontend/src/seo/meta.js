@@ -4,7 +4,7 @@ import { LANDING, LANDING_PATHS } from './landing.js';
 
 export const HOME_META = {
   title: 'Ahmars Food: order Nigerian food in Lafia',
-  description: 'Order amala, pounded yam, jollof rice and shawarma for delivery around Maraba Akunza and Federal University Lafia. Pay online or on delivery.',
+  description: 'Order amala, pounded yam, jollof rice and shawarma for delivery around Maraba Akunza and Federal University Lafia. Pay online.',
 };
 export const DEFAULT_IMAGE = `${SITE.domain}/og-image.png`;
 

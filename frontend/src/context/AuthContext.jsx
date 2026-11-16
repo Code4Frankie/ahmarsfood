@@ -32,6 +32,8 @@ export function AuthProvider({ children }) {
   };
   const login = (identifier, password) => api.post('/auth/login', { identifier, password }).then(accept);
   const register = (form) => api.post('/auth/register', form).then(accept);
+  const riderSignup = (form) => api.post('/auth/rider-signup', form).then(accept);
+  const refresh = () => api.get('/auth/me').then((r) => { setUser(r.data.user); return r.data.user; });
 
-  return <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, login, register, riderSignup, refresh, logout }}>{children}</AuthContext.Provider>;
 }

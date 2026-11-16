@@ -21,7 +21,6 @@ export default function RiderHome() {
   const [geoError, setGeoError] = useState('');
   const [tab, setTab] = useState('now');
   const [history, setHistory] = useState(null);
-  const [collected, setCollected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
@@ -96,8 +95,7 @@ export default function RiderHome() {
   const accept = () => act(() => api.post(`/deliveries/${offer.id}/accept`));
   const reject = () => act(() => api.post(`/deliveries/${offer.id}/reject`));
   const advance = () => act(async () => {
-    await api.patch(`/deliveries/${active.id}/status`, { status: NEXT[active.status], collected });
-    setCollected(false);
+    await api.patch(`/deliveries/${active.id}/status`, { status: NEXT[active.status] });
     setHistory(null);
   });
 
@@ -108,7 +106,6 @@ export default function RiderHome() {
 
   const left = offer ? Math.max(0, Math.ceil((new Date(offer.offerExpiresAt).getTime() - now) / 1000)) : 0;
   const next = active ? NEXT[active.status] : null;
-  const needsCash = next === 'Delivered' && active?.order.collectAmount > 0;
 
   return (
     <div className="mx-auto max-w-md space-y-4">
@@ -144,7 +141,7 @@ export default function RiderHome() {
               </div>
               <p className="text-sm"><b>Pick up:</b> {offer.pickup.address}</p>
               <p className="text-sm"><b>Deliver to:</b> {offer.dropoff.address}{offer.dropoff.landmark ? `, ${offer.dropoff.landmark}` : ''}</p>
-              <p className="text-sm text-ink/70">{offer.distanceKm} km · you earn <b className="text-forest-dark">{naira(offer.deliveryFee)}</b>{offer.order.collectAmount > 0 && <> · collect <b>{naira(offer.order.collectAmount)}</b> from the customer</>}</p>
+              <p className="text-sm text-ink/70">{offer.distanceKm} km · you earn <b className="text-forest-dark">{naira(offer.deliveryFee)}</b></p>
               <div className="flex gap-2">
                 <button className="btn-primary flex-1 !py-3" disabled={busy || left === 0} onClick={accept}>Accept</button>
                 <button className="btn-ghost !py-3" disabled={busy} onClick={reject}>Decline</button>
@@ -167,13 +164,7 @@ export default function RiderHome() {
                 <a className="btn-ghost" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${active.dropoff.lat},${active.dropoff.lng}`}>Directions to customer</a>
               </div>
               <TrackMap rider={pos} destination={active.dropoff} height={200} />
-              {needsCash && (
-                <label className="flex items-start gap-2 rounded-lg bg-gold/30 p-3 text-sm font-semibold">
-                  <input type="checkbox" className="mt-1" checked={collected} onChange={(e) => setCollected(e.target.checked)} />
-                  I have collected {naira(active.order.collectAmount)} (cash or transfer)
-                </label>
-              )}
-              {next && <button className="btn-primary w-full !py-3" disabled={busy || (needsCash && !collected)} onClick={advance}>{LABEL[next]}</button>}
+              {next && <button className="btn-primary w-full !py-3" disabled={busy} onClick={advance}>{LABEL[next]}</button>}
             </div>
           )}
         </>

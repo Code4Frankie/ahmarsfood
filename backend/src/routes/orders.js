@@ -2,7 +2,6 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import Food from '../models/Food.js';
 import Order from '../models/Order.js';
-import Payment from '../models/Payment.js';
 import { protect, requireRole } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
@@ -11,7 +10,6 @@ import { haversineKm, isValidCoord } from '../utils/geo.js';
 import { deliveryFeeFor, estimateMinutes } from '../utils/pricing.js';
 import { normalizePhone, isValidPhone } from '../utils/phone.js';
 import { initPayment } from '../services/payments.js';
-import { startDispatch } from '../services/dispatch.js';
 import { findOrderForUser, listOrdersForUser } from '../services/orders.js';
 
 const router = Router();
@@ -21,7 +19,7 @@ router.post('/', protect, requireRole('customer', 'admin'), asyncHandler(async (
   const lat = Number(req.body.lat);
   const lng = Number(req.body.lng);
 
-  if (!['paystack', 'opay', 'pod'].includes(paymentMethod)) throw new HttpError(400, 'Choose a payment method');
+  if (!['paystack', 'opay'].includes(paymentMethod)) throw new HttpError(400, 'Choose a payment method');
   if (!deliveryAddress?.trim()) throw new HttpError(400, 'Delivery address is required');
   if (!isValidCoord(lat, lng)) throw new HttpError(400, 'Pin your delivery location on the map');
   const phone = normalizePhone(req.body.phone || req.user.phone);
@@ -51,9 +49,6 @@ router.post('/', protect, requireRole('customer', 'admin'), asyncHandler(async (
   }
   const deliveryFee = deliveryFeeFor(distanceKm, env.delivery);
   const total = subtotal + deliveryFee;
-  if (paymentMethod === 'pod' && total > env.maxPodAmount) {
-    throw new HttpError(400, `Pay on Delivery is limited to orders up to ₦${env.maxPodAmount.toLocaleString()}. Please pay online.`);
-  }
   const prep = Math.max(...foods.map((f) => f.prepTime || 15));
 
   const order = await Order.create({
@@ -63,7 +58,7 @@ router.post('/', protect, requireRole('customer', 'admin'), asyncHandler(async (
     deliveryFee,
     total,
     paymentMethod,
-    status: paymentMethod === 'pod' ? 'Pending' : 'Pending Payment',
+    status: 'Pending Payment',
     customerName: (req.body.name || req.user.name).trim(),
     customerPhone: phone,
     note: note?.slice(0, 300),
@@ -74,12 +69,6 @@ router.post('/', protect, requireRole('customer', 'admin'), asyncHandler(async (
     distanceKm: Math.round(distanceKm * 10) / 10,
     estimatedTime: estimateMinutes(distanceKm, prep),
   });
-
-  if (paymentMethod === 'pod') {
-    await Payment.create({ order: order._id, provider: 'POD', reference: `${order.orderNo}-POD`, amount: total });
-    startDispatch(order._id).catch((e) => console.error('[dispatch] failed', e));
-    return res.status(201).json({ order });
-  }
 
   // Online payment: the order exists but stays "Pending Payment" and is NOT visible to the kitchen until verified.
   try {
