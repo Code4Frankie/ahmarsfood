@@ -20,7 +20,7 @@ export default function Menu() {
   return (
     <div>
       <section className="mb-8 overflow-hidden rounded-3xl bg-forest text-white">
-        <div className="aspect-[1345/1200] w-full md:aspect-[2.4/1]">
+        <div className="aspect-[3/2] w-full md:aspect-[2/1]">
           <picture>
             <source media="(min-width: 768px)" type="image/webp" srcSet={HERO.desktop.webp} sizes="(min-width: 1152px) 1152px, 100vw" />
             <source media="(min-width: 768px)" type="image/jpeg" srcSet={HERO.desktop.jpg} sizes="(min-width: 1152px) 1152px, 100vw" />
