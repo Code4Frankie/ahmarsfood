@@ -19,8 +19,8 @@ export default function Menu() {
 
   return (
     <div>
-      <section className="mb-8 overflow-hidden rounded-3xl bg-forest text-white">
-        <div className="aspect-[3/2] w-full md:aspect-[2/1]">
+      <section className="relative mb-8 overflow-hidden rounded-3xl bg-forest text-white [container-type:inline-size]">
+        <div className="aspect-[3/2] w-full md:aspect-[1.9/1]">
           <picture>
             <source media="(min-width: 768px)" type="image/webp" srcSet={HERO.desktop.webp} sizes="(min-width: 1152px) 1152px, 100vw" />
             <source media="(min-width: 768px)" type="image/jpeg" srcSet={HERO.desktop.jpg} sizes="(min-width: 1152px) 1152px, 100vw" />
@@ -29,11 +29,11 @@ export default function Menu() {
             <img src={HERO.mobile.fallback} alt={HERO.alt} className="h-full w-full object-cover" fetchPriority="high" decoding="async" />
           </picture>
         </div>
-        {/* Mobile: visible headline under the picture. Desktop: the wordmark is in the picture, so this stays for screen readers and search only. */}
-        <div className="px-6 py-8 md:sr-only">
-          <span className="inline-block -rotate-2 rounded-full bg-gold px-3 py-1 font-mono text-xs font-bold text-ink">MARABA AKUNZA · FEDERAL UNIVERSITY LAFIA</span>
-          <h1 className="mt-4 text-4xl font-extrabold leading-tight">Home cooking,<br /><span className="text-gold">...trust in the taste.</span></h1>
-          <p className="mt-3 max-w-md text-white/90">Order amala, jollof, shawarma and more in Lafia. Pay online or on delivery, then follow your rider to your door.</p>
+        {/* Phones: text sits under the picture. md and up: the same text is laid over the dark-red area of the picture (sizes scale with the hero width). */}
+        <div className="px-6 py-8 md:absolute md:left-[4%] md:top-[4%] md:w-[54%] md:p-0 md:[text-shadow:0_1px_10px_rgba(0,0,0,.45)]">
+          <span className="inline-block -rotate-2 rounded-full bg-gold px-3 py-1 font-mono text-xs font-bold text-ink md:px-[1.1cqw] md:py-[0.35cqw] md:text-[1cqw]">LAFIA · GANDU · AKUNZA · FULAFIA</span>
+          <h1 className="mt-4 text-4xl font-extrabold leading-tight md:mt-[1.1cqw] md:text-[4cqw] md:leading-[1.05]">Cooked with Love,<br /><span className="text-gold md:text-[2.7cqw]">...trust in the taste, Ci-Kalashe.</span></h1>
+          <p className="mt-3 max-w-md text-white/90 md:sr-only lg:not-sr-only lg:mt-[1cqw] md:max-w-[44cqw] md:text-[1.3cqw] md:leading-snug">Order pounded yam, fried/jollof rice, shawarma and more in Lafia. Pay online or on delivery, then follow your rider to your door.</p>
         </div>
       </section>
 
