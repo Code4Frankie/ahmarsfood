@@ -27,5 +27,9 @@ export const protect = asyncHandler(async (req, res, next) => {
   next();
 });
 
+// Signed-in users are recognised; with no Authorization header the request continues as a guest (req.user stays unset).
+// A header that is present but invalid is still refused, so a stale login is not silently treated as a guest.
+export const optionalAuth = (req, res, next) => (req.headers.authorization ? protect(req, res, next) : next());
+
 export const requireRole = (...roles) => (req, res, next) =>
   roles.includes(req.user.role) ? next() : next(new HttpError(403, 'Forbidden'));

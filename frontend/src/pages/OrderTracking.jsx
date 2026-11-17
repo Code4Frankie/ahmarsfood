@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import api, { errMsg, getConfig } from '../api';
 import StatusBadge from '../components/StatusBadge.jsx';
 import { TrackMap } from '../components/MapPicker.jsx';
 import { naira } from '../utils/money';
 import { usePageMeta } from '../hooks/usePageMeta.js';
+import { getGuestToken, saveGuestToken } from '../utils/guestOrders.js';
 
 const FLOW = ['Pending Payment', 'Pending', 'Preparing', 'On The Way', 'Delivered'];
 const STEP_LABEL = { 'Pending Payment': 'Payment', Pending: 'Received', Preparing: 'Preparing', 'On The Way': 'On the way', Delivered: 'Delivered' };
@@ -21,8 +22,13 @@ export default function OrderTracking() {
   const [notice, setNotice] = useState(location.state?.paymentError || '');
   const [busy, setBusy] = useState(false);
 
+  // Guests open their order with the secret from the link (?t=...); it is also remembered on this device.
+  const token = useRef(params.get('t') || getGuestToken(id));
+  useEffect(() => { saveGuestToken(id, token.current); }, [id]);
+  const auth = () => (token.current ? { headers: { 'x-order-token': token.current } } : undefined);
+
   const load = useCallback(async () => {
-    try { setData((await api.get(`/orders/${id}`)).data); setError(''); }
+    try { setData((await api.get(`/orders/${id}`, auth())).data); setError(''); }
     catch (e) { setError(errMsg(e)); }
   }, [id]);
 
@@ -33,8 +39,8 @@ export default function OrderTracking() {
     (async () => {
       const ref = params.get('ref');
       if (ref) {
-        try { await api.get(`/payments/verify/${encodeURIComponent(ref)}`); } catch { /* the order page shows the real status */ }
-        setParams({}, { replace: true });
+        try { await api.get(`/payments/verify/${encodeURIComponent(ref)}`, auth()); } catch { /* the order page shows the real status */ }
+        setParams(token.current ? { t: token.current } : {}, { replace: true });
       }
       await load();
     })();
@@ -53,7 +59,7 @@ export default function OrderTracking() {
   const payAgain = async (provider) => {
     setBusy(true); setNotice('');
     try {
-      const { data: res } = await api.post(`/payments/${provider}/init`, { orderId: id });
+      const { data: res } = await api.post(`/payments/${provider}/init`, { orderId: id }, auth());
       window.location.assign(res.payment.authorizationUrl || res.payment.cashierUrl);
     } catch (e) { setNotice(errMsg(e)); setBusy(false); }
   };
@@ -76,6 +82,13 @@ export default function OrderTracking() {
         </div>
         <StatusBadge status={order.status} />
       </div>
+
+      {!order.user && (
+        <p className="rounded-lg bg-gold/25 p-3 text-sm">
+          You ordered as a guest. <b>Save this page</b> (bookmark it, or screenshot your order number {order.orderNo}) to check on your food later.{' '}
+          <Link to="/register" className="font-semibold text-forest">Create an account</Link> to keep all your orders in one place.
+        </p>
+      )}
 
       {notice && <p className="rounded-lg bg-chili/10 p-3 text-sm text-chili">{notice}</p>}
 

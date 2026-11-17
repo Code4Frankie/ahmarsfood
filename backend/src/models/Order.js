@@ -18,7 +18,8 @@ const genOrderNo = () =>
 const orderSchema = new mongoose.Schema(
   {
     orderNo: { type: String, unique: true, default: genOrderNo },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true }, // empty for guest orders
+    guestTokenHash: { type: String, select: false }, // guest orders only: hash of the secret in the tracking link
     items: { type: [itemSchema], validate: (v) => v.length > 0 },
     subtotal: { type: Number, required: true },
     deliveryFee: { type: Number, required: true },

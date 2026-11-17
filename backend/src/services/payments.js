@@ -9,14 +9,15 @@ import { startDispatch } from './dispatch.js';
 const PROVIDER_NAME = { paystack: 'Paystack', opay: 'Opay' };
 
 // Create a Payment attempt and get the provider's checkout link. Order must be "Pending Payment".
-export async function initPayment(order, provider, user) {
+export async function initPayment(order, provider, user, { guestToken } = {}) {
   if (!PROVIDER_NAME[provider]) throw new HttpError(400, 'Unsupported payment provider');
   if (order.status !== 'Pending Payment') throw new HttpError(409, 'This order is not awaiting payment');
 
   const reference = `${order.orderNo}-${Date.now().toString(36)}`.toUpperCase();
   const amountKobo = Math.round(order.total * 100);
   const frontend = env.frontendUrls[0];
-  const returnUrl = `${frontend}/orders/${order._id}?ref=${reference}`;
+  const tokenQs = guestToken ? `&t=${guestToken}` : ''; // guests need their link token to land back on their order
+  const returnUrl = `${frontend}/orders/${order._id}?ref=${reference}${tokenQs}`;
 
   let checkout;
   let raw;
@@ -37,7 +38,7 @@ export async function initPayment(order, provider, user) {
       user,
       description: `Order ${order.orderNo}`,
       returnUrl,
-      cancelUrl: `${frontend}/orders/${order._id}?cancelled=1`,
+      cancelUrl: `${frontend}/orders/${order._id}?cancelled=1${tokenQs}`,
       callbackUrl: `${env.apiUrl}/api/webhooks/opay`,
     });
     checkout = { cashierUrl: raw.cashierUrl };

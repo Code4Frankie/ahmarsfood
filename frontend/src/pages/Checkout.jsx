@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import api, { errMsg, getConfig } from '../api';
+import { saveGuestToken } from '../utils/guestOrders.js';
 import MapPicker from '../components/MapPicker.jsx';
 import { naira } from '../utils/money';
 import { haversineKm, feeFor } from '../utils/geo';
@@ -90,11 +91,12 @@ export default function Checkout() {
         lat: pin.lat,
         lng: pin.lng,
       });
+      if (data.guestToken) saveGuestToken(data.order._id, data.guestToken);
       placed.current = true;
       clear();
       const url = data.payment?.authorizationUrl || data.payment?.cashierUrl;
       if (url) window.location.assign(url); // off to Paystack / Opay; they send the customer back to the order page
-      else navigate(`/orders/${data.order._id}`, { replace: true, state: { paymentError: data.paymentError } });
+      else navigate(`/orders/${data.order._id}${data.guestToken ? `?t=${data.guestToken}` : ''}`, { replace: true, state: { paymentError: data.paymentError } });
     } catch (err) {
       setError(errMsg(err));
       setBusy(false);
@@ -108,6 +110,7 @@ export default function Checkout() {
 
         <section className="card space-y-4">
           <h2 className="text-lg font-bold">Who is this for?</h2>
+          {!user && <p className="-mt-2 text-sm text-ink/70">No account needed. <Link to="/login" className="font-semibold text-forest">Log in</Link> if you have one, to keep your orders together.</p>}
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className="label">Name</label><input className="input" value={form.name} onChange={set('name')} required /></div>
             <div><label className="label">Phone (the rider will call this)</label><input className="input" type="tel" value={form.phone} onChange={set('phone')} required /></div>

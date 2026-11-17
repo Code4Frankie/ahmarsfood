@@ -53,9 +53,9 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/rider/signup" element={<RiderSignup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/checkout" element={<Protected><Checkout /></Protected>} />
+        <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<Protected><Orders /></Protected>} />
-        <Route path="/orders/:id" element={<Protected><OrderTracking /></Protected>} />
+        <Route path="/orders/:id" element={<OrderTracking />} />
         <Route path="/admin" element={<RoleOnly role="admin"><AdminLayout /></RoleOnly>}>
           <Route index element={<Navigate to="orders" replace />} />
           <Route path="orders" element={<AdminOrders />} />

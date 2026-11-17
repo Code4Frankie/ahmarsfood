@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Delivery from '../models/Delivery.js';
 import { HttpError } from '../utils/httpError.js';
+import { guestTokenMatches } from '../utils/guestToken.js';
 
 // Shape of a delivery as the CUSTOMER sees it: rider name/phone/bike, status, ETA, live position once on the road.
 export async function trackingView(orderId) {
@@ -16,6 +17,20 @@ export async function trackingView(orderId) {
       ? { name: r.user?.name, phone: r.user?.phone, bikeNumber: r.bikeNumber, location: onRoad && r.location?.coordinates ? { lat: r.location.coordinates[1], lng: r.location.coordinates[0] } : undefined }
       : null,
   };
+}
+
+export const orderTokenFrom = (req) => String(req.get('x-order-token') || req.query.t || '').trim();
+
+// Who may see or pay for an order: an admin, the signed-in owner, or whoever holds the guest link token.
+export async function canAccessOrder(order, req) {
+  if (req.user) {
+    if (req.user.role === 'admin') return true;
+    if (order.user && String(order.user) === String(req.user._id)) return true;
+  }
+  const token = orderTokenFrom(req);
+  if (!token || order.user) return false; // a guest token only opens guest orders
+  const withHash = await Order.findById(order._id).select('+guestTokenHash');
+  return guestTokenMatches(token, withHash?.guestTokenHash);
 }
 
 export async function listOrdersForUser(user, limit = 50) {

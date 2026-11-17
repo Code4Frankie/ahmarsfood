@@ -51,3 +51,17 @@ test('reset codes are 6 digits and only the right code, user and secret match th
   assert.equal(resetCodeMatches('12345', 'user1', hash, 'secret'), false);
   assert.equal(resetCodeMatches('042917', 'user1', undefined, 'secret'), false);
 });
+
+import { newGuestToken, hashGuestToken, guestTokenMatches } from '../utils/guestToken.js';
+
+test('guest order tokens: random, hashed for storage, and only the right token matches', () => {
+  const a = newGuestToken(); const b = newGuestToken();
+  assert.match(a, /^[0-9a-f]{48}$/);
+  assert.notEqual(a, b);
+  const hash = hashGuestToken(a);
+  assert.notEqual(hash, a);
+  assert.equal(guestTokenMatches(a, hash), true);
+  assert.equal(guestTokenMatches(b, hash), false);
+  assert.equal(guestTokenMatches('', hash), false);
+  assert.equal(guestTokenMatches(a, undefined), false);
+});
