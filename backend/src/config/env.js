@@ -10,11 +10,11 @@ export const env = {
   frontendUrls: (process.env.FRONTEND_URL || 'http://localhost:5173').split(',').map((s) => s.trim()),
   apiUrl: process.env.API_URL || 'http://localhost:5000',
   paystackSecret: process.env.PAYSTACK_SECRET_KEY,
-  opay: {
-    publicKey: process.env.OPAY_PUBLIC_KEY,
-    secretKey: process.env.OPAY_SECRET_KEY,
-    merchantId: process.env.OPAY_MERCHANT_ID,
-    baseUrl: process.env.OPAY_BASE_URL || 'https://sandboxapi.opaycheckout.com',
+  // Where customers send bank transfers. Change these without touching code by setting the BANK_* variables.
+  bank: {
+    name: process.env.BANK_NAME || 'Moniepoint',
+    accountNumber: process.env.BANK_ACCOUNT_NUMBER || '5218266799',
+    accountName: process.env.BANK_ACCOUNT_NAME || 'Ahmars Food I',
   },
   sms: {
     apiKey: process.env.TERMII_API_KEY,
@@ -34,11 +34,10 @@ export const env = {
     whatsapp: '2348114077101',
     lat: num(process.env.RESTAURANT_LAT, 8.4966),
     lng: num(process.env.RESTAURANT_LNG, 8.5153),
-    maxRadiusKm: num(process.env.MAX_DELIVERY_RADIUS_KM, 5),
+    maxRadiusKm: num(process.env.MAX_DELIVERY_RADIUS_KM, 25), // wide enough for all of Lafia; also the rider search radius
   },
   delivery: {
-    baseFee: num(process.env.DELIVERY_BASE_FEE, 300),
-    perKm: num(process.env.DELIVERY_PER_KM, 100),
+    perKm: num(process.env.DELIVERY_PER_KM, 600), // N600 for the first km, N600 more for each further km (or part of one)
     offerTimeoutMs: num(process.env.OFFER_TIMEOUT_SECONDS, 120) * 1000,
     locationStaleMs: num(process.env.RIDER_LOCATION_STALE_SECONDS, 120) * 1000,
   },

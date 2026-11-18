@@ -3,7 +3,7 @@ import api, { errMsg } from '../../api';
 import { naira } from '../../utils/money';
 
 const today = () => new Date(Date.now() + 3600000).toISOString().slice(0, 10); // Lafia time (UTC+1)
-const METHOD = { paystack: 'Paystack', opay: 'Opay' };
+const METHOD = { paystack: 'Paystack', transfer: 'Bank transfer' };
 const CHIP = { success: 'bg-forest/15 text-forest-dark', initiated: 'bg-gold/40 text-ink', failed: 'bg-chili/15 text-chili', abandoned: 'bg-ink/10 text-ink/60' };
 
 export default function AdminMoney() {
@@ -48,7 +48,7 @@ export default function AdminMoney() {
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-bold">Payments</h2>
-          <select className="input !w-auto" value={provider} onChange={(e) => setProvider(e.target.value)}><option value="">All providers</option><option>Paystack</option><option>Opay</option></select>
+          <select className="input !w-auto" value={provider} onChange={(e) => setProvider(e.target.value)}><option value="">All providers</option><option>Paystack</option><option>Transfer</option></select>
           <select className="input !w-auto" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option>success</option><option>initiated</option><option>failed</option><option>abandoned</option></select>
         </div>
         {payments?.length === 0 && <p className="card text-ink/60">No payments match.</p>}

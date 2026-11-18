@@ -21,18 +21,4 @@ router.post('/paystack', express.raw({ type: '*/*', limit: '1mb' }), async (req,
   }
 });
 
-// OPay posts a JSON callback. We only use it as a nudge: the reference is looked up and the real status
-// is fetched from OPay's status API (signed with our secret key), so the callback body itself is never trusted.
-router.post('/opay', express.json({ limit: '1mb' }), async (req, res) => {
-  res.status(200).json({ received: true });
-  try {
-    const reference = req.body?.payload?.reference;
-    if (!reference) return;
-    const payment = await Payment.findOne({ reference });
-    if (payment) await verifyAndConfirm(payment);
-  } catch (err) {
-    console.error('[webhook:opay]', err.message);
-  }
-});
-
 export default router;

@@ -14,6 +14,7 @@ export default function Landing({ page }) {
   const foods = data?.foods || [];
   const picks = foods.filter((f) => f.isAvailable).slice(0, 6);
   const radius = cfg?.delivery?.maxRadiusKm;
+  const perKm = cfg?.delivery?.perKm;
   const wa = cfg?.restaurant?.whatsapp;
 
   return (
@@ -42,7 +43,7 @@ export default function Landing({ page }) {
           )}
           {s.delivery && (
             <p className="text-ink/80">
-              We deliver {radius ? `within about ${radius} km of` : 'within a set distance of'} the restaurant at Maraba Akunza. Drop a pin on the map at checkout and the delivery fee is worked out from the distance and shown before you pay.
+              We deliver {radius ? `within about ${radius} km of` : 'within a set distance of'} the restaurant at Maraba Akunza. Drop a pin on the map at checkout and the delivery fee is worked out from the distance{perKm ? ` (₦${perKm.toLocaleString()} for the first km, plus the same for each extra km)` : ''} and shown before you pay. Prefer to collect it yourself? Choose pickup at the restaurant.
             </p>
           )}
         </section>

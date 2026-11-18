@@ -1,7 +1,7 @@
 import { schemas } from '../schemas.js';
 
 // Money is involved, so this is confirmation-gated. Confirming only OPENS the existing checkout page, where the
-// customer pins their address and pays through Paystack/Opay. The assistant never sees or handles card data.
+// customer pins their address and pays by card or bank transfer. The assistant never sees or handles card data.
 export const makeGoToCheckout = () => ({
   name: 'go_to_checkout',
   label: 'Preparing checkout…',

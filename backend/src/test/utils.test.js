@@ -17,12 +17,16 @@ test('isValidCoord rejects NaN and out-of-range values', () => {
   assert.equal(isValidCoord(8, 181), false);
 });
 
-test('deliveryFeeFor = base + per-km x distance, rounded up to N50', () => {
-  const rule = { baseFee: 300, perKm: 100 };
-  assert.equal(deliveryFeeFor(0, rule), 300);
-  assert.equal(deliveryFeeFor(1, rule), 400);
-  assert.equal(deliveryFeeFor(2.3, rule), 550); // 530 -> 550
-  assert.equal(deliveryFeeFor(5, rule), 800);
+test('deliveryFeeFor = N600 for the first km, N600 more for each further km or part of one', () => {
+  const rule = { perKm: 600 };
+  assert.equal(deliveryFeeFor(0, rule), 600);
+  assert.equal(deliveryFeeFor(0.4, rule), 600);
+  assert.equal(deliveryFeeFor(1, rule), 600);
+  assert.equal(deliveryFeeFor(1.0000001, rule), 600); // rounding noise, still the first km
+  assert.equal(deliveryFeeFor(1.01, rule), 1200);
+  assert.equal(deliveryFeeFor(2, rule), 1200);
+  assert.equal(deliveryFeeFor(2.5, rule), 1800);
+  assert.equal(deliveryFeeFor(12.2, rule), 7800);
 });
 
 test('estimateMinutes adds prep, riding time and a 5 minute buffer', () => {

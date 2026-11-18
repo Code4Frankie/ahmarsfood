@@ -12,8 +12,8 @@ import { usePageMeta } from '../hooks/usePageMeta.js';
 const localPhone = (p) => (p?.startsWith('234') ? '0' + p.slice(3) : p || '');
 
 const METHODS = [
-  { id: 'paystack', title: 'Paystack', sub: 'Card, bank transfer or USSD' },
-  { id: 'opay', title: 'Opay', sub: 'Opay wallet, transfer or card' },
+  { id: 'paystack', title: 'Pay online', sub: 'Card, bank transfer or USSD, confirmed instantly (Paystack)' },
+  { id: 'transfer', title: 'Bank transfer', sub: 'Send the money to our Moniepoint account. We confirm it and start your order.' },
 ];
 
 export default function Checkout() {
@@ -28,6 +28,7 @@ export default function Checkout() {
   const [pinConfirmed, setPinConfirmed] = useState(false); // false while the pin is just the Lafia starting point
   const [geoMsg, setGeoMsg] = useState('');
   const [method, setMethod] = useState('paystack');
+  const [fulfillment, setFulfillment] = useState('delivery'); // 'delivery' or 'pickup' (collect at the restaurant)
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ name: user?.name || '', phone: localPhone(user?.phone), deliveryAddress: '', landmark: '', note: '' });
@@ -48,9 +49,10 @@ export default function Checkout() {
   if (items.length === 0 && !placed.current) return <Navigate to="/cart" replace />;
 
   const r = cfg?.restaurant;
-  const distanceKm = pin && pinConfirmed && r ? haversineKm(r.lat, r.lng, pin.lat, pin.lng) : null;
+  const pickup = fulfillment === 'pickup';
+  const distanceKm = !pickup && pin && pinConfirmed && r ? haversineKm(r.lat, r.lng, pin.lat, pin.lng) : null;
   const outside = distanceKm != null && distanceKm > cfg.delivery.maxRadiusKm;
-  const fee = distanceKm != null && !outside ? feeFor(distanceKm, cfg.delivery) : null;
+  const fee = pickup ? 0 : distanceKm != null && !outside ? feeFor(distanceKm, cfg.delivery) : null;
   const total = subtotal + (fee || 0);
 
   const useMyLocation = () => {
@@ -76,26 +78,24 @@ export default function Checkout() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!pin || !pinConfirmed) return setError('Tap the map or drag the pin to where you want the food, so the rider can find you.');
-    if (outside) return setError(`Sorry, we only deliver within ${cfg.delivery.maxRadiusKm} km of the restaurant.`);
+    if (!pickup && (!pin || !pinConfirmed)) return setError('Tap the map or drag the pin to where you want the food, so the rider can find you.');
+    if (!pickup && outside) return setError(`Sorry, we only deliver within ${cfg.delivery.maxRadiusKm} km of the restaurant.`);
     setBusy(true);
     try {
       const { data } = await api.post('/orders', {
         items: items.map((i) => ({ foodId: i.foodId, qty: i.qty })),
         paymentMethod: method,
-        deliveryAddress: form.deliveryAddress,
-        landmark: form.landmark,
+        fulfillment,
+        ...(pickup ? {} : { deliveryAddress: form.deliveryAddress, landmark: form.landmark, lat: pin.lat, lng: pin.lng }),
         note: form.note,
         name: form.name,
         phone: form.phone,
-        lat: pin.lat,
-        lng: pin.lng,
       });
       if (data.guestToken) saveGuestToken(data.order._id, data.guestToken);
       placed.current = true;
       clear();
-      const url = data.payment?.authorizationUrl || data.payment?.cashierUrl;
-      if (url) window.location.assign(url); // off to Paystack / Opay; they send the customer back to the order page
+      const url = data.payment?.authorizationUrl;
+      if (url) window.location.assign(url); // off to Paystack; it sends the customer back to the order page
       else navigate(`/orders/${data.order._id}${data.guestToken ? `?t=${data.guestToken}` : ''}`, { replace: true, state: { paymentError: data.paymentError } });
     } catch (err) {
       setError(errMsg(err));
@@ -113,10 +113,27 @@ export default function Checkout() {
           {!user && <p className="-mt-2 text-sm text-ink/70">No account needed. <Link to="/login" className="font-semibold text-forest">Log in</Link> if you have one, to keep your orders together.</p>}
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className="label">Name</label><input className="input" value={form.name} onChange={set('name')} required /></div>
-            <div><label className="label">Phone (the rider will call this)</label><input className="input" type="tel" value={form.phone} onChange={set('phone')} required /></div>
+            <div><label className="label">{pickup ? 'Phone' : 'Phone (the rider will call this)'}</label><input className="input" type="tel" value={form.phone} onChange={set('phone')} required /></div>
           </div>
         </section>
 
+        <section className="card space-y-3">
+          <h2 className="text-lg font-bold">How do you want your food?</h2>
+          {[
+            { id: 'delivery', title: 'Delivery', sub: cfg ? `${naira(cfg.delivery.perKm)} for the first km, plus ${naira(cfg.delivery.perKm)} for each extra km. Anywhere within ${cfg.delivery.maxRadiusKm} km of the restaurant.` : 'A rider brings it to you.' },
+            { id: 'pickup', title: 'Pickup at the restaurant', sub: `Live at or near the restaurant? Pay now and collect it yourself at ${cfg?.pickup?.address || 'the restaurant'}. No rider and no delivery fee.` },
+          ].map((o) => (
+            <label key={o.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 ${fulfillment === o.id ? 'border-forest bg-forest/5' : 'border-ink/10'}`}>
+              <input type="radio" name="fulfillment" className="mt-1" checked={fulfillment === o.id} onChange={() => setFulfillment(o.id)} />
+              <span>
+                <span className="block font-semibold">{o.title}</span>
+                <span className="block text-sm text-ink/60">{o.sub}</span>
+              </span>
+            </label>
+          ))}
+        </section>
+
+        {!pickup && (
         <section className="card space-y-4">
           <h2 className="text-lg font-bold">Where should we deliver?</h2>
           {cfg ? (
@@ -133,6 +150,15 @@ export default function Checkout() {
           <div><label className="label">Landmark (optional)</label><input className="input" placeholder="e.g. beside the main gate" value={form.landmark} onChange={set('landmark')} /></div>
           <div><label className="label">Note for the kitchen or rider (optional)</label><textarea className="input" rows={2} maxLength={300} value={form.note} onChange={set('note')} /></div>
         </section>
+        )}
+
+        {pickup && (
+          <section className="card space-y-3">
+            <h2 className="text-lg font-bold">Pickup details</h2>
+            <p className="text-sm text-ink/70">Collect your food at {cfg?.pickup?.address || 'the restaurant'} once we mark it ready. We will keep this page updated.</p>
+            <div><label className="label">Note for the kitchen (optional)</label><textarea className="input" rows={2} maxLength={300} value={form.note} onChange={set('note')} /></div>
+          </section>
+        )}
 
         <section className="card space-y-3">
           <h2 className="text-lg font-bold">How would you like to pay?</h2>
@@ -156,13 +182,13 @@ export default function Checkout() {
           </ul>
           <div className="space-y-1 border-t border-dashed border-ink/20 pt-3 text-sm">
             <div className="flex justify-between"><span>Subtotal</span><span className="font-mono">{naira(subtotal)}</span></div>
-            <div className="flex justify-between"><span>Delivery{distanceKm != null && !outside ? ` (${distanceKm.toFixed(1)} km)` : ''}</span><span className="font-mono">{fee != null ? naira(fee) : 'Pin your location'}</span></div>
+            <div className="flex justify-between"><span>{pickup ? 'Pickup' : `Delivery${distanceKm != null && !outside ? ` (${distanceKm.toFixed(1)} km)` : ''}`}</span><span className="font-mono">{pickup ? 'Free' : fee != null ? naira(fee) : 'Pin your location'}</span></div>
             <div className="flex justify-between border-t border-ink/10 pt-2 text-lg font-bold"><span>Total</span><span className="font-mono">{naira(total)}</span></div>
           </div>
-          {fee != null && <p className="text-xs text-ink/50">The final delivery fee is confirmed when you place the order.</p>}
+          {!pickup && fee != null && <p className="text-xs text-ink/50">The final delivery fee is confirmed when you place the order.</p>}
           {error && <p className="rounded-lg bg-chili/10 p-3 text-sm text-chili">{error}</p>}
           <button className="btn-accent w-full" disabled={busy || !cfg}>
-            {busy ? 'Placing order…' : 'Place order and pay'}
+            {busy ? 'Placing order…' : method === 'transfer' ? 'Place order' : 'Place order and pay'}
           </button>
         </div>
       </aside>

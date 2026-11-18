@@ -11,8 +11,9 @@ const TABS = [
   { id: 'done', label: 'Delivered', status: 'Delivered' },
   { id: 'cancelled', label: 'Cancelled', status: 'Cancelled' },
 ];
-const ACTIVE = ['Pending', 'Preparing', 'On The Way'];
-const METHOD = { paystack: 'Paystack', opay: 'Opay' };
+const ACTIVE = ['Pending', 'Preparing', 'Ready for Pickup', 'On The Way'];
+const METHOD = { paystack: 'Paystack', transfer: 'Bank transfer' };
+const awaitingTransfer = (o) => o.status === 'Pending Payment' && o.paymentMethod === 'transfer' && o.transferClaimedAt;
 const time = (d) => new Date(d).toLocaleString('en-NG', { dateStyle: 'short', timeStyle: 'short' });
 
 function DeliveryLine({ d }) {
@@ -43,8 +44,9 @@ export default function AdminOrders() {
     try {
       const t = TABS.find((x) => x.id === tab);
       const [o, r] = await Promise.all([api.get('/admin/orders', { params: { limit: 100, ...(t.status ? { status: t.status } : {}) } }), api.get('/admin/riders')]);
-      const list = tab === 'active' ? o.data.orders.filter((x) => ACTIVE.includes(x.status)) : o.data.orders;
-      const waiting = list.filter((x) => x.status === 'Pending').length;
+      // Active also shows bank transfers the customer says they have sent, so they are not missed.
+      const list = tab === 'active' ? o.data.orders.filter((x) => ACTIVE.includes(x.status) || awaitingTransfer(x)) : o.data.orders;
+      const waiting = list.filter((x) => x.status === 'Pending' || awaitingTransfer(x)).length;
       if (prevPending.current !== null && waiting > prevPending.current) beep(); // a new paid order arrived
       prevPending.current = waiting;
       setOrders(list);
@@ -58,7 +60,12 @@ export default function AdminOrders() {
     setBusyId(id); setError(''); setNote('');
     try { const r = await fn(); if (say) setNote(say(r)); await load(); } catch (e) { setError(errMsg(e)); } finally { setBusyId(''); }
   };
-  const prepare = (o) => run(o._id, () => api.patch(`/admin/orders/${o._id}/status`, { status: 'Preparing' }));
+  const setStatus = (o, status) => run(o._id, () => api.patch(`/admin/orders/${o._id}/status`, { status }));
+  const prepare = (o) => setStatus(o, 'Preparing');
+  const confirmTransfer = (o) => {
+    if (!window.confirm(`Confirm that ${naira(o.total)} for ${o.orderNo} has arrived in the Moniepoint account? Check the exact amount and the narration first.`)) return;
+    run(o._id, () => api.post(`/admin/orders/${o._id}/confirm-transfer`), () => 'Payment confirmed. The order is now with the kitchen.');
+  };
   const cancel = (o) => {
     const warn = o.paymentStatus === 'paid' ? ' It was paid online, so you will have to refund the customer yourself.' : '';
     if (!window.confirm(`Cancel order ${o.orderNo}?${warn}`)) return;
@@ -67,7 +74,8 @@ export default function AdminOrders() {
   const assign = (o) => run(o._id, async () => { await api.post(`/admin/orders/${o._id}/assign`, { riderId }); setAssignFor(''); setRiderId(''); }, () => 'Rider assigned.');
   const redispatch = (o) => run(o._id, () => api.post(`/admin/orders/${o._id}/redispatch`), () => 'Searching again…');
 
-  const unassigned = (orders || []).filter((o) => o.delivery?.status === 'Unassigned' && ACTIVE.includes(o.status)).length;
+  const unassigned = (orders || []).filter((o) => o.fulfillment !== 'pickup' && o.delivery?.status === 'Unassigned' && ACTIVE.includes(o.status)).length;
+  const transfers = (orders || []).filter(awaitingTransfer).length;
   const ridersSorted = [...riders].sort((a, b) => Number(b.isOnline) - Number(a.isOnline));
 
   return (
@@ -82,6 +90,7 @@ export default function AdminOrders() {
       </div>
       <p className="text-xs text-ink/50">Updates by itself every 10 seconds. You hear a beep when a new paid order arrives.</p>
 
+      {transfers > 0 && <p className="rounded-lg bg-gold/30 p-3 text-sm font-semibold">{transfers} bank transfer(s) to confirm. Check the Moniepoint app, then press "Confirm transfer received".</p>}
       {unassigned > 0 && <p className="rounded-lg bg-chili/10 p-3 text-sm font-semibold text-chili">{unassigned} order(s) have no rider. Assign one below.</p>}
       {error && <p className="rounded-lg bg-chili/10 p-3 text-sm text-chili">{error}</p>}
       {note && <p className="rounded-lg bg-forest/10 p-3 text-sm text-forest-dark">{note}</p>}
@@ -90,12 +99,13 @@ export default function AdminOrders() {
 
       {orders?.map((o) => {
         const d = o.delivery;
-        const canAssign = ['Pending', 'Preparing'].includes(o.status) && !['Delivered', 'Cancelled'].includes(d?.status);
+        const isPickup = o.fulfillment === 'pickup';
+        const canAssign = !isPickup && ['Pending', 'Preparing'].includes(o.status) && !['Delivered', 'Cancelled'].includes(d?.status);
         const busy = busyId === o._id;
         return (
           <div key={o._id} className="card space-y-3 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-mono font-bold">{o.orderNo} <span className="font-sans font-normal text-ink/50">· {time(o.createdAt)}</span></p>
+              <p className="font-mono font-bold">{o.orderNo} {isPickup && <span className="rounded-full bg-gold/40 px-2 py-0.5 font-sans text-xs font-bold">PICKUP</span>} <span className="font-sans font-normal text-ink/50">· {time(o.createdAt)}</span></p>
               <StatusBadge status={o.status} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -109,13 +119,17 @@ export default function AdminOrders() {
                 <p className="mt-1 font-mono font-bold">{naira(o.total)} <span className="font-sans font-normal text-ink/60">({METHOD[o.paymentMethod]}, {o.paymentStatus === 'paid' ? 'paid' : 'not paid'})</span></p>
               </div>
             </div>
-            {o.status !== 'Pending Payment' && <DeliveryLine d={d} />}
+            {o.status !== 'Pending Payment' && !isPickup && <DeliveryLine d={d} />}
+            {awaitingTransfer(o) && <p className="rounded bg-gold/30 p-2 font-semibold">Customer says they sent {naira(o.total)} by transfer. Look for narration {o.orderNo}.</p>}
 
             <div className="flex flex-wrap gap-2">
+              {o.status === 'Pending Payment' && o.paymentMethod === 'transfer' && <button className="btn-primary" disabled={busy} onClick={() => confirmTransfer(o)}>Confirm transfer received</button>}
               {o.status === 'Pending' && <button className="btn-primary" disabled={busy} onClick={() => prepare(o)}>Start preparing</button>}
+              {isPickup && o.status === 'Preparing' && <button className="btn-primary" disabled={busy} onClick={() => setStatus(o, 'Ready for Pickup')}>Ready for pickup</button>}
+              {isPickup && o.status === 'Ready for Pickup' && <button className="btn-primary" disabled={busy} onClick={() => setStatus(o, 'Delivered')}>Customer collected it</button>}
               {canAssign && <button className="btn-ghost" disabled={busy} onClick={() => setAssignFor(assignFor === o._id ? '' : o._id)}>Assign rider</button>}
               {canAssign && ['Unassigned', 'Searching'].includes(d?.status) && <button className="btn-ghost" disabled={busy} onClick={() => redispatch(o)}>Search again</button>}
-              {['Pending Payment', 'Pending', 'Preparing'].includes(o.status) && <button className="btn-ghost !text-chili" disabled={busy} onClick={() => cancel(o)}>Cancel</button>}
+              {['Pending Payment', 'Pending', 'Preparing', 'Ready for Pickup'].includes(o.status) && <button className="btn-ghost !text-chili" disabled={busy} onClick={() => cancel(o)}>Cancel</button>}
             </div>
 
             {assignFor === o._id && (

@@ -40,7 +40,7 @@ export default function Cart() {
 
       <div className="card mt-4">
         <div className="flex justify-between text-lg font-bold"><span>Subtotal</span><span className="font-mono">{naira(subtotal)}</span></div>
-        <p className="mt-1 text-sm text-ink/60">The delivery fee is added at checkout, once you pin your location.</p>
+        <p className="mt-1 text-sm text-ink/60">The delivery fee is added at checkout once you pin your location. Collecting at the restaurant has no delivery fee.</p>
         <div className="mt-4 flex gap-3">
           <button className="btn-ghost" onClick={clear}>Empty cart</button>
           <button className="btn-primary flex-1" onClick={() => navigate('/checkout')}>Checkout</button>

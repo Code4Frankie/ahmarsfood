@@ -7,6 +7,6 @@ export function haversineKm(lat1, lng1, lat2, lng2) {
   return 2 * 6371 * Math.asin(Math.sqrt(a));
 }
 
-// Same rule as the server (base + perKm x distance, rounded up to N50). This is only a PREVIEW:
-// the server recalculates the real fee when the order is placed.
-export const feeFor = (km, { baseFee, perKm }) => Math.ceil((baseFee + perKm * km) / 50) * 50;
+// Same rule as the server: perKm for the first km, then perKm again for each further km or part of one.
+// This is only a PREVIEW: the server recalculates the real fee when the order is placed.
+export const feeFor = (km, { perKm }) => perKm * Math.max(1, Math.ceil(Math.round(km * 100) / 100));

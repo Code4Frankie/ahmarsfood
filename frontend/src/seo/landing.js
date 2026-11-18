@@ -14,13 +14,13 @@ export const LANDING = {
     ],
     sections: [
       { heading: 'What you can order', body: ['Our menu is grouped into swallow and soups, rice, shawarma and drinks. Every dish has its own page with the price and how long it takes to prepare.'], dishes: true },
-      { heading: 'How ordering works', steps: ['Choose your dishes, or ask the Ahmars assistant to help you pick.', 'Drop a pin where you want the food, then pay online with Paystack (card, bank transfer or USSD) or Opay.', 'Follow your order: once a rider picks it up you can see them on the map and call them.'] },
+      { heading: 'How ordering works', steps: ['Choose your dishes, or ask the Ahmars assistant to help you pick.', 'Choose delivery (drop a pin where you want the food) or pickup at the restaurant, then pay online or by bank transfer.', 'Follow your order: once a rider picks it up you can see them on the map and call them.'] },
       { heading: 'Where we deliver', delivery: true },
     ],
     faq: [
       { q: 'Where is Ahmars Food?', a: 'At Maraba Akunza, Federal University Lafia, Nasarawa State.' },
-      { q: 'How do I pay?', a: 'Online with Paystack (card, bank transfer or USSD) or Opay, when you place your order.' },
-      { q: 'How much is delivery?', a: 'It depends on the distance from the restaurant. The fee is shown at checkout before you pay.' },
+      { q: 'How do I pay?', a: 'Online by card, bank transfer or USSD, or by sending a bank transfer to our Moniepoint account. You pay when you place your order.' },
+      { q: 'How much is delivery?', a: 'N600 for the first kilometre and N600 for each extra kilometre. The exact fee is shown at checkout before you pay. Collecting at the restaurant is free.' },
       { q: 'Can I follow my order?', a: 'Yes. Your order page shows each step, and once a rider has your food you can see where they are.' },
     ],
   },
@@ -35,13 +35,13 @@ export const LANDING = {
     ],
     sections: [
       { heading: 'Order from your hostel', body: ['At checkout, drop the pin on your hostel and type the hostel or gate name in the address box. Add a landmark if it helps. The rider calls the phone number you give, so keep it on.'] },
-      { heading: 'Pay your way', body: ['Pay online with Paystack (card, bank transfer or USSD) or with Opay, right when you place your order.'] },
+      { heading: 'Pay your way', body: ['Pay online by card, bank transfer or USSD, or send a bank transfer to our Moniepoint account, right when you place your order.'] },
       { heading: 'Dishes to start with', dishes: true },
       { heading: 'Where we deliver', delivery: true },
     ],
     faq: [
       { q: 'Do you deliver to hostels?', a: 'Yes, as long as the hostel is inside our delivery area. Drop the pin there and add the hostel or gate name.' },
-      { q: 'How do I pay?', a: 'Online with Paystack (card, bank transfer or USSD) or Opay, when you place your order.' },
+      { q: 'How do I pay?', a: 'Online by card, bank transfer or USSD, or by sending a bank transfer to our Moniepoint account, when you place your order.' },
       { q: 'Do I need an account?', a: 'Yes. A quick sign-up with your phone number lets you pay, track the order and call your rider.' },
       { q: 'Where is the restaurant?', a: 'At Maraba Akunza, Federal University Lafia.' },
     ],

@@ -11,6 +11,7 @@ import { HttpError } from '../utils/httpError.js';
 import { normalizePhone, isValidPhone } from '../utils/phone.js';
 import { assignManually, redispatch, cancelDelivery } from '../services/dispatch.js';
 import { dailySummary } from '../services/reports.js';
+import { confirmPayment } from '../services/payments.js';
 import rateLimit from 'express-rate-limit';
 import { env } from '../config/env.js';
 import { createLlm } from '../agent/llm.js';
@@ -50,15 +51,34 @@ router.patch('/orders/:id/status', asyncHandler(async (req, res) => {
 
   if (status === 'Preparing') {
     if (order.status !== 'Pending') throw new HttpError(409, 'Only paid / confirmed orders can start preparing');
+  } else if (status === 'Ready for Pickup') {
+    if (order.fulfillment !== 'pickup') throw new HttpError(400, 'Only pickup orders can be marked ready for pickup');
+    if (order.status !== 'Preparing') throw new HttpError(409, 'Start preparing the order first');
+  } else if (status === 'Delivered') {
+    if (order.fulfillment !== 'pickup') throw new HttpError(400, 'Riders mark delivery orders delivered');
+    if (order.status !== 'Ready for Pickup') throw new HttpError(409, 'Mark the order ready for pickup first');
   } else if (status === 'Cancelled') {
-    if (!['Pending Payment', 'Pending', 'Preparing'].includes(order.status)) throw new HttpError(409, `Cannot cancel an order that is ${order.status}`);
+    if (!['Pending Payment', 'Pending', 'Preparing', 'Ready for Pickup'].includes(order.status)) throw new HttpError(409, `Cannot cancel an order that is ${order.status}`);
     await cancelDelivery(order._id);
   } else {
-    throw new HttpError(400, 'Admins can set Preparing or Cancelled; riders set On The Way and Delivered');
+    throw new HttpError(400, 'Admins can set Preparing, Ready for Pickup, Delivered (pickup orders) or Cancelled; riders set On The Way and Delivered');
   }
   order.status = status;
   await order.save();
   res.json({ order, refundNeeded: status === 'Cancelled' && order.paymentStatus === 'paid' });
+}));
+
+// Bank transfer: the admin has seen the money arrive in the Moniepoint app and confirms it. Same effect as a verified card payment.
+router.post('/orders/:id/confirm-transfer', asyncHandler(async (req, res) => {
+  const order = await Order.findById(needId(req.params.id));
+  if (!order) throw new HttpError(404, 'Order not found');
+  if (order.status !== 'Pending Payment') throw new HttpError(409, order.paymentStatus === 'paid' ? 'This order is already paid' : `Cannot confirm payment on an order that is ${order.status}`);
+  let payment = await Payment.findOne({ order: order._id, provider: 'Transfer' }).sort({ createdAt: -1 });
+  if (!payment) payment = await Payment.create({ order: order._id, provider: 'Transfer', reference: `${order.orderNo}-TRF-${Date.now().toString(36)}`.toUpperCase(), amount: order.total });
+  await confirmPayment(payment);
+  await Payment.updateOne({ _id: payment._id }, { note: `Transfer confirmed by ${req.user.name || 'admin'}` });
+  await Order.updateOne({ _id: order._id }, { paymentMethod: 'transfer' });
+  res.json({ order: await Order.findById(order._id) });
 }));
 
 router.get('/deliveries/unassigned', asyncHandler(async (req, res) => {

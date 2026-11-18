@@ -11,6 +11,7 @@ const ACTIVE = ['Offered', 'Accepted', 'Picked Up', 'On The Way'];
 export async function startDispatch(orderId) {
   const order = await Order.findById(orderId);
   if (!order) return null;
+  if (order.fulfillment === 'pickup') return null; // customer collects: no rider needed
   const fields = { distanceKm: order.distanceKm, estimatedTime: order.estimatedTime, deliveryFee: order.deliveryFee };
   try {
     await Delivery.updateOne(
@@ -139,6 +140,7 @@ export async function assignManually(orderId, riderId) {
 async function startDispatchRecord(orderId) {
   const order = await Order.findById(orderId);
   if (!order) throw new HttpError(404, 'Order not found');
+  if (order.fulfillment === 'pickup') throw new HttpError(409, 'This is a pickup order, it has no delivery');
   try {
     await Delivery.updateOne(
       { order: order._id },
@@ -186,7 +188,8 @@ export async function expireStaleOffers() {
 // Unpaid online orders older than an hour are cancelled so the list stays clean.
 export async function cancelAbandonedOrders() {
   await Order.updateMany(
-    { status: 'Pending Payment', createdAt: { $lt: new Date(Date.now() - 60 * 60 * 1000) } },
+    // A transfer the customer says they have made is left for an admin to confirm or cancel.
+    { status: 'Pending Payment', transferClaimedAt: { $exists: false }, createdAt: { $lt: new Date(Date.now() - 60 * 60 * 1000) } },
     { status: 'Cancelled' }
   );
 }
