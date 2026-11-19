@@ -162,7 +162,7 @@ export default function OrderTracking() {
       )}
 
       {!isPickup && ['Pending', 'Preparing'].includes(order.status) && delivery && FINDING.includes(delivery.status) && (
-        <p className="card text-sm text-ink/70">🛵 We are finding a rider for you. This page updates by itself.</p>
+        <p className="card text-sm text-ink/70">🛵 We are arranging a rider for you. This page updates by itself.</p>
       )}
 
       {!isPickup && rider && order.status !== 'Cancelled' && (
@@ -171,7 +171,7 @@ export default function OrderTracking() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="font-semibold">{rider.name}</p>
-              <p className="text-sm text-ink/60">Bike {rider.bikeNumber}</p>
+              <p className="text-sm text-ink/60">{rider.byCall ? 'Arranged by our team' : `Bike ${rider.bikeNumber}`}</p>
             </div>
             <a className="btn-primary" href={`tel:+${rider.phone}`}>📞 Call rider</a>
           </div>

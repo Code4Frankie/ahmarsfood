@@ -15,7 +15,9 @@ export async function trackingView(orderId) {
     estimatedTime: delivery.estimatedTime,
     rider: r && ['Accepted', 'Picked Up', 'On The Way', 'Delivered'].includes(delivery.status)
       ? { name: r.user?.name, phone: r.user?.phone, bikeNumber: r.bikeNumber, location: onRoad && r.location?.coordinates ? { lat: r.location.coordinates[1], lng: r.location.coordinates[0] } : undefined }
-      : null,
+      : delivery.manualRider?.phone && ['Accepted', 'Picked Up', 'On The Way', 'Delivered'].includes(delivery.status)
+        ? { name: delivery.manualRider.name, phone: delivery.manualRider.phone, byCall: true } // phoned in by the admin: no live location
+        : null,
   };
 }
 

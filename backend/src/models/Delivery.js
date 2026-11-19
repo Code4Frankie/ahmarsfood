@@ -20,6 +20,9 @@ const deliverySchema = new mongoose.Schema(
     estimatedTime: Number,
     deliveryFee: Number, // earned by the rider
     riderDistanceKm: Number, // rider -> restaurant when offered
+    // Delivery arranged by phone: the admin called a bike rider who is not on the app (see assignCallInRider).
+    manual: Boolean,
+    manualRider: { name: String, phone: String },
     attemptedRiders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Rider' }],
     offerExpiresAt: Date,
     acceptedAt: Date,

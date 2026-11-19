@@ -9,7 +9,8 @@ import { protect, requireRole } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
 import { normalizePhone, isValidPhone } from '../utils/phone.js';
-import { assignManually, redispatch, cancelDelivery } from '../services/dispatch.js';
+import { assignManually, redispatch, cancelDelivery, assignCallInRider, advanceCallInDelivery } from '../services/dispatch.js';
+import { getDeliverySettings, setDeliverySettings } from '../services/settings.js';
 import { dailySummary } from '../services/reports.js';
 import { confirmPayment } from '../services/payments.js';
 import rateLimit from 'express-rate-limit';
@@ -79,6 +80,18 @@ router.post('/orders/:id/confirm-transfer', asyncHandler(async (req, res) => {
   await Payment.updateOne({ _id: payment._id }, { note: `Transfer confirmed by ${req.user.name || 'admin'}` });
   await Order.updateOne({ _id: order._id }, { paymentMethod: 'transfer' });
   res.json({ order: await Order.findById(order._id) });
+}));
+
+// Delivery switch: riders on the app / admin phones a bike rider / delivery paused.
+router.get('/settings/delivery', asyncHandler(async (req, res) => res.json(await getDeliverySettings())));
+router.put('/settings/delivery', asyncHandler(async (req, res) => res.json(await setDeliverySettings(req.body))));
+
+// Call-in rider: the admin phoned a bike rider, records who it is, then moves the delivery along.
+router.post('/orders/:id/call-rider', asyncHandler(async (req, res) => {
+  res.json({ delivery: await assignCallInRider(needId(req.params.id), req.body) });
+}));
+router.patch('/orders/:id/call-rider-status', asyncHandler(async (req, res) => {
+  res.json({ delivery: await advanceCallInDelivery(needId(req.params.id), req.body.status) });
 }));
 
 router.get('/deliveries/unassigned', asyncHandler(async (req, res) => {

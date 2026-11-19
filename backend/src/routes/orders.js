@@ -12,6 +12,7 @@ import { haversineKm, isValidCoord } from '../utils/geo.js';
 import { deliveryFeeFor, estimateMinutes } from '../utils/pricing.js';
 import { normalizePhone, isValidPhone } from '../utils/phone.js';
 import { initPayment, createTransferPayment } from '../services/payments.js';
+import { getDeliverySettings } from '../services/settings.js';
 import { listOrdersForUser, canAccessOrder, trackingView } from '../services/orders.js';
 
 const router = Router();
@@ -35,6 +36,10 @@ router.post('/', optionalAuth, (req, res, next) => (req.user ? next() : guestLim
   const lng = Number(req.body.lng);
 
   if (!['paystack', 'transfer'].includes(paymentMethod)) throw new HttpError(400, 'Choose a payment method');
+  if (!pickup) {
+    const { mode, note } = await getDeliverySettings();
+    if (mode === 'paused') throw new HttpError(409, `Delivery is paused right now${note ? `: ${note}` : ' (no rider available)'}. You can still order for pickup at the restaurant.`);
+  }
   if (!pickup && !deliveryAddress?.trim()) throw new HttpError(400, 'Delivery address is required');
   if (!pickup && !isValidCoord(lat, lng)) throw new HttpError(400, 'Pin your delivery location on the map');
   const phone = normalizePhone(req.body.phone || req.user?.phone);

@@ -7,6 +7,7 @@ import { homeMeta } from '../seo/meta.js';
 import { LANDING_PATHS } from '../seo/landing.js';
 import { slugMap } from '../utils/slug.js';
 import { HERO } from '../heroConfig.js';
+import DeliveryNotice from '../components/DeliveryNotice.jsx';
 
 export default function Menu() {
   usePageMeta(homeMeta());
@@ -40,6 +41,8 @@ export default function Menu() {
           <p className="mt-3 max-w-md text-white/90 md:sr-only lg:not-sr-only lg:mt-[1cqw] md:max-w-[44cqw] md:text-[1.3cqw] md:leading-snug">Order pounded yam, fried/jollof rice, shawarma and more in Lafia. Pay online, then follow your rider to your door.</p>
         </div>
       </section>
+
+      <DeliveryNotice />
 
       <div className="mb-5 flex flex-wrap gap-2">
         {cats.map((c) => (

@@ -4,6 +4,7 @@ import StatusBadge from '../../components/StatusBadge.jsx';
 import { usePoll } from '../../hooks/usePoll.js';
 import { beep } from '../../utils/alert.js';
 import { naira } from '../../utils/money';
+import DeliverySwitch from './DeliverySwitch.jsx';
 
 const TABS = [
   { id: 'active', label: 'Active', status: '' },
@@ -19,7 +20,15 @@ const time = (d) => new Date(d).toLocaleString('en-NG', { dateStyle: 'short', ti
 function DeliveryLine({ d }) {
   if (!d) return <p className="text-ink/60">Rider search has not started.</p>;
   const rider = d.rider?.user;
-  if (d.status === 'Unassigned') return <p className="font-semibold text-chili">No rider available. Assign one or search again.</p>;
+  if (d.manual && d.manualRider) {
+    return (
+      <p>
+        Call-in rider: <b>{d.manualRider.name}</b> · {d.status}
+        {d.manualRider.phone && <> · <a className="text-forest underline" href={`tel:+${d.manualRider.phone}`}>{d.manualRider.phone}</a></>}
+      </p>
+    );
+  }
+  if (d.status === 'Unassigned') return <p className="font-semibold text-chili">No rider yet. Call a bike rider, assign an app rider, or search again.</p>;
   if (['Searching', 'Offered'].includes(d.status)) return <p>Finding a rider{d.status === 'Offered' && rider ? ` (offered to ${rider.name})` : ''}…</p>;
   return (
     <p>
@@ -38,6 +47,9 @@ export default function AdminOrders() {
   const [busyId, setBusyId] = useState('');
   const [assignFor, setAssignFor] = useState('');
   const [riderId, setRiderId] = useState('');
+  const [callFor, setCallFor] = useState('');
+  const [callName, setCallName] = useState('');
+  const [callPhone, setCallPhone] = useState('');
   const prevPending = useRef(null);
 
   const load = useCallback(async () => {
@@ -72,6 +84,8 @@ export default function AdminOrders() {
     run(o._id, () => api.patch(`/admin/orders/${o._id}/status`, { status: 'Cancelled' }), (r) => (r.data.refundNeeded ? `Cancelled. Refund ${naira(o.total)} to ${o.customerName} yourself.` : 'Order cancelled.'));
   };
   const assign = (o) => run(o._id, async () => { await api.post(`/admin/orders/${o._id}/assign`, { riderId }); setAssignFor(''); setRiderId(''); }, () => 'Rider assigned.');
+  const callRider = (o) => run(o._id, async () => { await api.post(`/admin/orders/${o._id}/call-rider`, { name: callName, phone: callPhone }); setCallFor(''); setCallName(''); setCallPhone(''); }, () => 'Bike rider recorded. Customer can now see their name and number.');
+  const callStatus = (o, status) => run(o._id, () => api.patch(`/admin/orders/${o._id}/call-rider-status`, { status }));
   const redispatch = (o) => run(o._id, () => api.post(`/admin/orders/${o._id}/redispatch`), () => 'Searching again…');
 
   const unassigned = (orders || []).filter((o) => o.fulfillment !== 'pickup' && o.delivery?.status === 'Unassigned' && ACTIVE.includes(o.status)).length;
@@ -90,8 +104,10 @@ export default function AdminOrders() {
       </div>
       <p className="text-xs text-ink/50">Updates by itself every 10 seconds. You hear a beep when a new paid order arrives.</p>
 
+      <DeliverySwitch />
+
       {transfers > 0 && <p className="rounded-lg bg-gold/30 p-3 text-sm font-semibold">{transfers} bank transfer(s) to confirm. Check the Moniepoint app, then press "Confirm transfer received".</p>}
-      {unassigned > 0 && <p className="rounded-lg bg-chili/10 p-3 text-sm font-semibold text-chili">{unassigned} order(s) have no rider. Assign one below.</p>}
+      {unassigned > 0 && <p className="rounded-lg bg-chili/10 p-3 text-sm font-semibold text-chili">{unassigned} order(s) have no rider. Call a bike rider or assign one below.</p>}
       {error && <p className="rounded-lg bg-chili/10 p-3 text-sm text-chili">{error}</p>}
       {note && <p className="rounded-lg bg-forest/10 p-3 text-sm text-forest-dark">{note}</p>}
       {orders === null && !error && <p className="text-ink/60">Loading…</p>}
@@ -127,11 +143,25 @@ export default function AdminOrders() {
               {o.status === 'Pending' && <button className="btn-primary" disabled={busy} onClick={() => prepare(o)}>Start preparing</button>}
               {isPickup && o.status === 'Preparing' && <button className="btn-primary" disabled={busy} onClick={() => setStatus(o, 'Ready for Pickup')}>Ready for pickup</button>}
               {isPickup && o.status === 'Ready for Pickup' && <button className="btn-primary" disabled={busy} onClick={() => setStatus(o, 'Delivered')}>Customer collected it</button>}
-              {canAssign && <button className="btn-ghost" disabled={busy} onClick={() => setAssignFor(assignFor === o._id ? '' : o._id)}>Assign rider</button>}
+              {canAssign && <button className="btn-primary" disabled={busy} onClick={() => { setCallFor(callFor === o._id ? '' : o._id); setAssignFor(''); }}>Call a bike rider</button>}
+              {d?.manual && d.status === 'Accepted' && <button className="btn-ghost" disabled={busy} onClick={() => callStatus(o, 'Picked Up')}>Rider picked it up</button>}
+              {d?.manual && d.status === 'Picked Up' && <button className="btn-ghost" disabled={busy} onClick={() => callStatus(o, 'On The Way')}>On the way</button>}
+              {d?.manual && d.status === 'On The Way' && <button className="btn-primary" disabled={busy} onClick={() => callStatus(o, 'Delivered')}>Delivered</button>}
+              {canAssign && <button className="btn-ghost" disabled={busy} onClick={() => { setAssignFor(assignFor === o._id ? '' : o._id); setCallFor(''); }}>Assign app rider</button>}
               {canAssign && ['Unassigned', 'Searching'].includes(d?.status) && <button className="btn-ghost" disabled={busy} onClick={() => redispatch(o)}>Search again</button>}
               {['Pending Payment', 'Pending', 'Preparing', 'Ready for Pickup'].includes(o.status) && <button className="btn-ghost !text-chili" disabled={busy} onClick={() => cancel(o)}>Cancel</button>}
             </div>
 
+            {callFor === o._id && (
+              <div className="space-y-2 rounded-lg bg-cream p-3">
+                <p className="text-xs text-ink/60">Phone a bike rider, then enter who is coming. The customer sees this name and number on their order page.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input className="input !w-auto min-w-[10rem] flex-1" placeholder="Rider's name" value={callName} onChange={(e) => setCallName(e.target.value)} />
+                  <input className="input !w-auto min-w-[10rem] flex-1" type="tel" placeholder="Rider's phone, e.g. 0812 345 6789" value={callPhone} onChange={(e) => setCallPhone(e.target.value)} />
+                  <button className="btn-primary" disabled={busy || callName.trim().length < 2 || callPhone.replace(/\D/g, '').length < 10} onClick={() => callRider(o)}>Save rider</button>
+                </div>
+              </div>
+            )}
             {assignFor === o._id && (
               <div className="flex flex-wrap items-center gap-2 rounded-lg bg-cream p-3">
                 <select className="input !w-auto min-w-[14rem]" value={riderId} onChange={(e) => setRiderId(e.target.value)}>

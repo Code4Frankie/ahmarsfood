@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import { naira } from '../utils/money';
 import { usePageMeta } from '../hooks/usePageMeta.js';
+import DeliveryNotice from '../components/DeliveryNotice.jsx';
 
 export default function Cart() {
   usePageMeta({ title: 'Your cart | Ahmars Food', noindex: true });
@@ -21,6 +22,7 @@ export default function Cart() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-4 text-3xl font-bold">Your cart</h1>
+      <DeliveryNotice />
       <div className="card divide-y divide-dashed divide-ink/20 !p-0">
         {items.map((i) => (
           <div key={i.foodId} className="flex items-center justify-between gap-3 p-4">

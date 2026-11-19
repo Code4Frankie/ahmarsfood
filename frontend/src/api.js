@@ -24,7 +24,15 @@ api.interceptors.response.use(
 
 export const errMsg = (e) => e?.response?.data?.message || e?.message || 'Something went wrong';
 
+// Cached briefly, so the admin's delivery switch reaches customers within about 20 seconds without a page reload.
 let configPromise;
-export const getConfig = () => (configPromise ||= api.get('/config').then((r) => r.data));
+let configAt = 0;
+export const getConfig = () => {
+  if (!configPromise || Date.now() - configAt > 20000) {
+    configAt = Date.now();
+    configPromise = api.get('/config').then((r) => r.data).catch((e) => { configPromise = undefined; throw e; });
+  }
+  return configPromise;
+};
 
 export default api;

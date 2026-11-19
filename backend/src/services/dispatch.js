@@ -4,6 +4,8 @@ import Delivery from '../models/Delivery.js';
 import Order from '../models/Order.js';
 import { HttpError } from '../utils/httpError.js';
 import { haversineKm } from '../utils/geo.js';
+import { normalizePhone, isValidPhone } from '../utils/phone.js';
+import { getDeliverySettings } from './settings.js';
 
 const ACTIVE = ['Offered', 'Accepted', 'Picked Up', 'On The Way'];
 
@@ -13,15 +15,19 @@ export async function startDispatch(orderId) {
   if (!order) return null;
   if (order.fulfillment === 'pickup') return null; // customer collects: no rider needed
   const fields = { distanceKm: order.distanceKm, estimatedTime: order.estimatedTime, deliveryFee: order.deliveryFee };
+  // "Call a bike rider" mode: skip the app riders, the order goes straight to the admin's queue.
+  const manualMode = (await getDeliverySettings()).mode === 'manual';
+  const start = manualMode ? { status: 'Unassigned', unassignedAt: new Date() } : { status: 'Searching' };
   try {
     await Delivery.updateOne(
       { order: order._id },
-      { $setOnInsert: { order: order._id, status: 'Searching', attemptedRiders: [], ...fields } },
+      { $setOnInsert: { order: order._id, ...start, attemptedRiders: [], ...fields } },
       { upsert: true }
     );
   } catch (err) {
     if (err.code !== 11000) throw err; // lost an upsert race: the delivery already exists
   }
+  if (manualMode) { console.log(`[dispatch] order ${order._id} -> admin queue (call-in mode)`); return; }
   await offerToNextRider(await Delivery.findOne({ order: order._id }).select('_id'));
 }
 
@@ -134,6 +140,40 @@ export async function assignManually(orderId, riderId) {
     { new: true }
   );
   await Rider.updateOne({ _id: riderId }, { isAvailable: false });
+  return delivery;
+}
+
+// Admin phoned a bike rider who is not on the app: record who it is. Replaces any app rider already on the order.
+export async function assignCallInRider(orderId, { name, phone }) {
+  const riderName = String(name || '').trim();
+  const riderPhone = normalizePhone(phone);
+  if (riderName.length < 2) throw new HttpError(400, "Enter the rider's name");
+  if (!isValidPhone(riderPhone)) throw new HttpError(400, "Enter the rider's phone number");
+  const order = await Order.findById(orderId);
+  if (!order) throw new HttpError(404, 'Order not found');
+  if (!['Pending', 'Preparing'].includes(order.status)) throw new HttpError(409, `Cannot assign a rider to an order that is ${order.status}`);
+  await startDispatchRecord(orderId);
+  const before = await Delivery.findOne({ order: orderId });
+  if (['Delivered', 'Cancelled'].includes(before.status)) throw new HttpError(409, `Delivery is already ${before.status}`);
+  if (before.rider && ['Picked Up', 'On The Way'].includes(before.status)) throw new HttpError(409, 'An app rider is already on the road with this order');
+  if (before.rider) await Rider.updateOne({ _id: before.rider }, { isAvailable: true });
+  return Delivery.findOneAndUpdate(
+    { order: orderId },
+    { $set: { status: 'Accepted', manual: true, manualRider: { name: riderName, phone: riderPhone }, acceptedAt: new Date() }, $unset: { rider: 1, offerExpiresAt: 1 } },
+    { new: true }
+  );
+}
+
+// The admin plays the rider's part for a call-in delivery: Picked Up -> On The Way -> Delivered.
+export async function advanceCallInDelivery(orderId, nextStatus) {
+  const current = Object.keys(NEXT).find((k) => NEXT[k] === nextStatus);
+  if (!current) throw new HttpError(400, 'Invalid status');
+  const set = { status: nextStatus };
+  if (nextStatus === 'Delivered') set.deliveredAt = new Date();
+  const delivery = await Delivery.findOneAndUpdate({ order: orderId, manual: true, status: current }, { $set: set }, { new: true });
+  if (!delivery) throw new HttpError(409, `This call-in delivery must be "${current}" before it can be "${nextStatus}"`);
+  if (nextStatus === 'Picked Up') await Order.updateOne({ _id: orderId }, { status: 'On The Way' });
+  if (nextStatus === 'Delivered') await Order.updateOne({ _id: orderId }, { status: 'Delivered' });
   return delivery;
 }
 

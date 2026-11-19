@@ -41,6 +41,7 @@ export default function Checkout() {
     getConfig()
       .then((c) => {
         setCfg(c);
+        if (c.delivery.mode === 'paused') setFulfillment('pickup'); // no rider available: start on pickup
         setPinRaw((cur) => cur || { lat: c.restaurant.lat, lng: c.restaurant.lng }); // default pin: Lafia, never the visitor's own city
       })
       .catch((e) => setError(errMsg(e)));
@@ -49,7 +50,8 @@ export default function Checkout() {
   if (items.length === 0 && !placed.current) return <Navigate to="/cart" replace />;
 
   const r = cfg?.restaurant;
-  const pickup = fulfillment === 'pickup';
+  const paused = cfg?.delivery?.mode === 'paused';
+  const pickup = fulfillment === 'pickup' || paused; // delivery is not offered while paused
   const distanceKm = !pickup && pin && pinConfirmed && r ? haversineKm(r.lat, r.lng, pin.lat, pin.lng) : null;
   const outside = distanceKm != null && distanceKm > cfg.delivery.maxRadiusKm;
   const fee = pickup ? 0 : distanceKm != null && !outside ? feeFor(distanceKm, cfg.delivery) : null;
@@ -120,11 +122,11 @@ export default function Checkout() {
         <section className="card space-y-3">
           <h2 className="text-lg font-bold">How do you want your food?</h2>
           {[
-            { id: 'delivery', title: 'Delivery', sub: cfg ? `${naira(cfg.delivery.perKm)} for the first km, plus ${naira(cfg.delivery.perKm)} for each extra km. Anywhere within ${cfg.delivery.maxRadiusKm} km of the restaurant.` : 'A rider brings it to you.' },
+            { id: 'delivery', title: 'Delivery', disabled: paused, sub: paused ? `Paused right now: no rider is available${cfg.delivery.note ? ` (${cfg.delivery.note})` : ''}. Please choose pickup, or try again later.` : cfg ? `${naira(cfg.delivery.perKm)} for the first km, plus ${naira(cfg.delivery.perKm)} for each extra km. Anywhere within ${cfg.delivery.maxRadiusKm} km of the restaurant.${cfg.delivery.mode === 'manual' ? ' Our team phones a bike rider for you, so it can take a little longer to get going.' : ''}` : 'A rider brings it to you.' },
             { id: 'pickup', title: 'Pickup at the restaurant', sub: `Live at or near the restaurant? Pay now and collect it yourself at ${cfg?.pickup?.address || 'the restaurant'}. No rider and no delivery fee.` },
           ].map((o) => (
-            <label key={o.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 ${fulfillment === o.id ? 'border-forest bg-forest/5' : 'border-ink/10'}`}>
-              <input type="radio" name="fulfillment" className="mt-1" checked={fulfillment === o.id} onChange={() => setFulfillment(o.id)} />
+            <label key={o.id} className={`flex items-start gap-3 rounded-xl border-2 p-3 ${o.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${fulfillment === o.id ? 'border-forest bg-forest/5' : 'border-ink/10'}`}>
+              <input type="radio" name="fulfillment" className="mt-1" disabled={o.disabled} checked={fulfillment === o.id} onChange={() => setFulfillment(o.id)} />
               <span>
                 <span className="block font-semibold">{o.title}</span>
                 <span className="block text-sm text-ink/60">{o.sub}</span>

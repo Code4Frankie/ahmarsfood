@@ -4,6 +4,8 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import { notFound, errorHandler } from './middleware/error.js';
+import { asyncHandler } from './utils/asyncHandler.js';
+import { getDeliverySettings } from './services/settings.js';
 import webhookRoutes from './routes/webhooks.js';
 import authRoutes from './routes/auth.js';
 import foodRoutes from './routes/foods.js';
@@ -32,15 +34,17 @@ const paymentLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standard
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 // Public restaurant info for the frontend (map centre, radius, fee rules, contact).
-app.get('/api/config', (req, res) =>
+app.get('/api/config', asyncHandler(async (req, res) => {
+  const { mode, note } = await getDeliverySettings(); // the admin can pause delivery or switch to call-in riders at any time
+  res.set('Cache-Control', 'no-store');
   res.json({
     restaurant: env.restaurant,
-    delivery: { perKm: env.delivery.perKm, maxRadiusKm: env.restaurant.maxRadiusKm },
+    delivery: { perKm: env.delivery.perKm, maxRadiusKm: env.restaurant.maxRadiusKm, mode, note },
     bank: env.bank,
     pickup: { address: env.restaurant.address },
     paymentMethods: ['paystack', 'transfer'],
-  })
-);
+  });
+}));
 
 app.use('/api/auth/forgot-password', resetLimiter);
 app.use('/api/auth/reset-password', resetLimiter);
